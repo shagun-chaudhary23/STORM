@@ -1,0 +1,237 @@
+import React, { useState } from 'react';
+import { zones, dataSources } from '../data/mockData';
+import { 
+  Radio, MapPin, Layers, Filter, Calendar, 
+  Activity, CheckCircle2, Clock, Satellite, Waves, ShieldAlert 
+} from 'lucide-react';
+
+export default function Sense() {
+  const [selectedRegion, setSelectedRegion] = useState('All Regions');
+  const [selectedZone, setSelectedZone] = useState(zones[0]);
+
+  const filteredZones = selectedRegion === 'All Regions' 
+    ? zones 
+    : zones.filter(z => z.name.includes(selectedRegion));
+
+  return (
+    <div className="relative pt-28 pb-20 overflow-hidden">
+      
+      {/* Glow Arc */}
+      <div className="hero-glow-arc-subtle"></div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-8 relative z-10 space-y-8">
+        
+        {/* Header Title */}
+        <div className="text-center max-w-3xl mx-auto space-y-3">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-white/10 bg-white/5 text-xs font-semibold uppercase tracking-wider text-[#FF6B1A]">
+            <Radio className="w-3.5 h-3.5 animate-pulse" />
+            <span>Telemetry & Live Anomaly Map</span>
+          </div>
+
+          <h1 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight">
+            The Sense Layer
+          </h1>
+
+          <p className="text-sm sm:text-base text-[#9A9A9A] leading-relaxed">
+            Multi-sensor data aggregation across NDMA Sachet alerts, IMD Doppler weather radar, ISRO Sentinel satellite passes, and ground observers.
+          </p>
+        </div>
+
+        {/* Top Filter Row */}
+        <div className="p-4 rounded-2xl bg-[#141414] border border-white/10 flex flex-wrap items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2 text-xs font-mono text-[#9A9A9A]">
+              <Filter className="w-3.5 h-3.5 text-[#FF6B1A]" />
+              <span>FILTER REGION:</span>
+            </div>
+
+            <select
+              value={selectedRegion}
+              onChange={(e) => setSelectedRegion(e.target.value)}
+              className="bg-[#0A0A0A] border border-white/10 rounded-full px-4 py-1.5 text-xs text-white focus:outline-none focus:border-[#FF6B1A]"
+            >
+              <option value="All Regions">All 4 Monitored Sectors</option>
+              <option value="South Sikkim">South Sikkim</option>
+              <option value="Kalimpong">Kalimpong</option>
+              <option value="Gangtok">Gangtok Rural</option>
+              <option value="Mangan">Mangan</option>
+            </select>
+          </div>
+
+          <div className="flex items-center gap-2 text-xs font-mono text-[#9A9A9A]">
+            <Calendar className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="text-white">Temporal Window:</span>
+            <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-slate-300">
+              Live (Last 24 Hours)
+            </span>
+          </div>
+        </div>
+
+        {/* Main Grid: Visual Map View (Left) vs Data Sources (Right) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          
+          {/* Left/Main Map Visual Placeholder */}
+          <div className="lg:col-span-8 space-y-6">
+            
+            <div className="p-6 rounded-2xl bg-[#141414] border border-white/10 relative overflow-hidden shadow-2xl space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-[#FF6B1A]" />
+                  <h2 className="text-base font-bold text-white">Spatial Inundation & Hazard Zones</h2>
+                </div>
+                <span className="text-[11px] font-mono text-emerald-400">Telemetry Active • 4 Zones Tracked</span>
+              </div>
+
+              {/* Map Canvas Simulator */}
+              <div className="relative w-full h-80 sm:h-96 rounded-xl bg-[#0A0A0A] border border-white/10 overflow-hidden flex items-center justify-center p-6">
+                
+                {/* Background Grid Pattern */}
+                <div className="absolute inset-0 opacity-20" style={{
+                  backgroundImage: 'radial-gradient(#ffffff 1px, transparent 1px)',
+                  backgroundSize: '24px 24px'
+                }}></div>
+
+                {/* Simulated Elevation Contours */}
+                <div className="absolute inset-8 rounded-full border border-[#FF6B1A]/10 pointer-events-none"></div>
+                <div className="absolute inset-20 rounded-full border border-white/5 pointer-events-none"></div>
+
+                {/* Interactive Zone Markers Placed Roughly */}
+                {filteredZones.map((zone, idx) => {
+                  const isCrit = zone.status === 'critical';
+                  const isWarn = zone.status === 'warning';
+                  const isSelected = selectedZone.id === zone.id;
+
+                  // Coordinated offsets for Sikkim map demo
+                  const positions = [
+                    { top: '35%', left: '30%' }, // Z-4B
+                    { top: '65%', left: '45%' }, // Z-2A
+                    { top: '40%', left: '70%' }, // Z-7C
+                    { top: '20%', left: '55%' }  // Z-1D
+                  ];
+                  const pos = positions[idx % positions.length];
+
+                  return (
+                    <div 
+                      key={zone.id}
+                      onClick={() => setSelectedZone(zone)}
+                      style={{ top: pos.top, left: pos.left }}
+                      className="absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer group z-20"
+                    >
+                      <div className="relative flex items-center justify-center">
+                        <span className={`w-8 h-8 rounded-full flex items-center justify-center font-mono text-[10px] font-extrabold border shadow-lg transition-transform group-hover:scale-125 ${
+                          isSelected ? 'ring-2 ring-white scale-110' : ''
+                        } ${
+                          isCrit ? 'bg-red-950 text-red-400 border-red-500/50' :
+                          isWarn ? 'bg-amber-950 text-amber-400 border-amber-500/50' :
+                          'bg-emerald-950 text-emerald-400 border-emerald-500/50'
+                        }`}>
+                          {zone.severity}
+                        </span>
+
+                        {isCrit && (
+                          <span className="absolute -inset-1 rounded-full bg-red-500/30 animate-ping pointer-events-none"></span>
+                        )}
+                      </div>
+
+                      {/* Tooltip Tag */}
+                      <div className="mt-1 px-2.5 py-0.5 rounded bg-[#141414] border border-white/10 text-[10px] font-mono text-slate-200 whitespace-nowrap shadow-md opacity-90 group-hover:opacity-100">
+                        {zone.name.split('–')[0].trim()}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                <div className="absolute bottom-3 left-4 text-[10px] font-mono text-[#9A9A9A] bg-black/60 px-3 py-1 rounded-md border border-white/5">
+                  Click a marker to inspect telemetry breakdown
+                </div>
+
+              </div>
+
+              {/* Active Zone Detail Card */}
+              {selectedZone && (
+                <div className="p-5 rounded-xl bg-white/5 border border-white/10 grid grid-cols-1 sm:grid-cols-4 gap-4 text-xs">
+                  <div>
+                    <span className="text-[#9A9A9A] block font-mono text-[10px]">SELECTED ZONE</span>
+                    <strong className="text-white text-sm">{selectedZone.name}</strong>
+                  </div>
+                  <div>
+                    <span className="text-[#9A9A9A] block font-mono text-[10px]">SEVERITY SCORE</span>
+                    <span className={`font-mono font-bold text-sm ${
+                      selectedZone.status === 'critical' ? 'text-red-400' :
+                      selectedZone.status === 'warning' ? 'text-amber-400' : 'text-emerald-400'
+                    }`}>
+                      {selectedZone.severity} / 10 ({selectedZone.status.toUpperCase()})
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[#9A9A9A] block font-mono text-[10px]">AFFECTED POPULATION</span>
+                    <strong className="text-slate-200">{selectedZone.population.toLocaleString()} residents</strong>
+                  </div>
+                  <div>
+                    <span className="text-[#9A9A9A] block font-mono text-[10px]">ACTIVE INCIDENTS</span>
+                    <strong className="text-[#FF6B1A]">{selectedZone.activeIncidents} reported</strong>
+                  </div>
+                </div>
+              )}
+
+            </div>
+
+          </div>
+
+          {/* Right Sidebar: Data Source Cards */}
+          <div className="lg:col-span-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-bold text-white">Live Data Ingestion Feeds</h2>
+              <span className="text-xs font-mono text-[#9A9A9A]">4 Sources</span>
+            </div>
+
+            <div className="space-y-4">
+              {dataSources.map((source, idx) => {
+                const isLive = source.status === 'live';
+
+                return (
+                  <div 
+                    key={idx}
+                    className="p-5 rounded-2xl bg-[#141414] border border-white/10 space-y-3"
+                  >
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-bold text-white">{source.name}</h3>
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider ${
+                        isLive 
+                          ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/30' 
+                          : 'bg-amber-950 text-amber-400 border border-amber-500/30'
+                      }`}>
+                        {source.status}
+                      </span>
+                    </div>
+
+                    <div className="space-y-1 text-xs">
+                      <div className="flex justify-between text-[#9A9A9A]">
+                        <span>Spatial Coverage</span>
+                        <strong className="text-white font-mono">{source.coverage}%</strong>
+                      </div>
+                      <div className="w-full h-1.5 rounded-full bg-white/5 overflow-hidden">
+                        <div 
+                          className={`h-full rounded-full ${isLive ? 'bg-emerald-400' : 'bg-amber-400'}`}
+                          style={{ width: `${source.coverage}%` }}
+                        ></div>
+                      </div>
+                    </div>
+
+                    <div className="pt-2 border-t border-white/5 flex items-center justify-between text-[11px] text-[#9A9A9A] font-mono">
+                      <span>Last Ingestion Sync:</span>
+                      <span className="text-slate-300 font-semibold">{source.lastSync}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  );
+}
