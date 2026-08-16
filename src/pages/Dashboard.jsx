@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import io from 'socket.io-client';
 import { 
-  zones, recommendations, resources, activityLog 
+  resources 
 } from '../data/mockData';
 import BottomDock from '../components/BottomDock';
 import { 
@@ -8,24 +9,39 @@ import {
   Layers, Truck, ArrowRight, Radio, Bell, RefreshCw, AlertTriangle
 } from 'lucide-react';
 
+const socket = io('http://localhost:3001');
+
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('overview');
-  const [pendingRecs, setPendingRecs] = useState(
-    recommendations.filter(r => r.status === 'pending')
-  );
-  const [approvedRecs, setApprovedRecs] = useState(
-    recommendations.filter(r => r.status === 'approved')
-  );
+  const [activeZones, setActiveZones] = useState([]);
+  const [pendingRecs, setPendingRecs] = useState([]);
+  const [approvedRecs, setApprovedRecs] = useState([]);
+  const [liveActivityLog, setLiveActivityLog] = useState([]);
 
-  const activeZonesCount = zones.length;
+  useEffect(() => {
+    socket.on('storm_state_update', (data) => {
+      setActiveZones(data.zones || []);
+      setPendingRecs(data.pendingRecommendations || []);
+      setApprovedRecs(data.approvedRecommendations || []);
+      setLiveActivityLog(data.activityLog || []);
+    });
+
+    return () => {
+      socket.off('storm_state_update');
+    };
+  }, []);
+
+  const activeZonesCount = activeZones.length;
   const availableResourcesCount = resources.filter(r => r.status === 'available').length;
 
   const handleApprove = (rec) => {
+    socket.emit('approve_recommendation', rec);
     setPendingRecs(pendingRecs.filter(r => r.id !== rec.id));
     setApprovedRecs([{ ...rec, status: 'approved', approvedAt: 'Just now' }, ...approvedRecs]);
   };
 
   const handleReject = (recId) => {
+    socket.emit('reject_recommendation', recId);
     setPendingRecs(pendingRecs.filter(r => r.id !== recId));
   };
 
@@ -220,7 +236,7 @@ export default function Dashboard() {
             </div>
 
             <div className="p-6 rounded-2xl bg-[#141414] border border-white/10 space-y-4">
-              {activityLog.map((log, idx) => (
+              {liveActivityLog.map((log, idx) => (
                 <div key={idx} className="flex items-start gap-3 text-xs pb-3 border-b border-white/5 last:border-0 last:pb-0">
                   <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
                     log.type === 'alert' ? 'bg-red-500' :

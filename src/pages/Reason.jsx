@@ -2,25 +2,49 @@ import React, { useState } from 'react';
 import { zones, recommendations, resources } from '../data/mockData';
 import { 
   Cpu, ArrowRight, UserCheck, ShieldCheck, Clock, 
-  Sparkles, AlertCircle, CheckCircle2, Sliders, ChevronRight 
+  Sparkles, AlertCircle, CheckCircle2, Sliders, ChevronRight, Fingerprint, Activity, Loader2
 } from 'lucide-react';
 
 export default function Reason() {
   const [selectedZoneId, setSelectedZoneId] = useState(zones[0].id);
   const [selectedResourceName, setSelectedResourceName] = useState(resources[0].name);
-  const [analyzed, setAnalyzed] = useState(true);
+  const [analyzed, setAnalyzed] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [isApproved, setIsApproved] = useState(false);
+  const [approvalPin, setApprovalPin] = useState('');
 
   // Match recommendation for selected zone or fallback to first
   const currentRec = recommendations.find(r => r.zone === selectedZoneId) || recommendations[0];
   const currentZone = zones.find(z => z.id === selectedZoneId) || zones[0];
+  const selectedResource = resources.find(r => r.name === selectedResourceName) || resources[0];
 
   const handleAnalyze = (e) => {
     e.preventDefault();
-    setAnalyzed(true);
+    setIsAnalyzing(true);
+    setAnalyzed(false);
+    setIsApproved(false);
+    
+    // Simulate AI thinking time
+    setTimeout(() => {
+      setIsAnalyzing(false);
+      setAnalyzed(true);
+    }, 2000);
+  };
+
+  const handleApprove = (e) => {
+    e.preventDefault();
+    if (approvalPin === '1234') { // Dummy PIN for simulation
+      setIsApproved(true);
+      setShowApprovalModal(false);
+      setApprovalPin('');
+    } else {
+      alert("Invalid PIN. Please try again.");
+    }
   };
 
   return (
-    <div className="relative pt-28 pb-20 overflow-hidden">
+    <div className="relative pt-28 pb-20 overflow-hidden min-h-screen">
       
       {/* Glow Arc */}
       <div className="hero-glow-arc-subtle"></div>
@@ -100,22 +124,46 @@ export default function Reason() {
             <div className="flex justify-center pt-2">
               <button
                 type="submit"
-                className="w-56 py-3.5 px-6 text-xs uppercase tracking-wider font-extrabold text-white bg-gradient-to-r from-[#FF6B1A] to-[#E8391A] hover:opacity-95 rounded-full shadow-lg shadow-[#FF6B1A]/20 transition-all cursor-pointer inline-flex items-center justify-center gap-2"
+                disabled={isAnalyzing}
+                className={`w-56 py-3.5 px-6 text-xs uppercase tracking-wider font-extrabold text-white rounded-full shadow-lg transition-all cursor-pointer inline-flex items-center justify-center gap-2 ${
+                  isAnalyzing 
+                    ? 'bg-slate-700 cursor-not-allowed' 
+                    : 'bg-gradient-to-r from-[#FF6B1A] to-[#E8391A] hover:opacity-95 shadow-[#FF6B1A]/20 hover:scale-[1.02]'
+                }`}
               >
-                <Sparkles className="w-4 h-4" />
-                <span>Analyze & Recommend</span>
+                {isAnalyzing ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Analyzing...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4" />
+                    <span>Analyze & Recommend</span>
+                  </>
+                )}
               </button>
             </div>
           </form>
         </div>
 
+        {/* AI Loading State */}
+        {isAnalyzing && (
+          <div className="max-w-3xl mx-auto p-12 text-center space-y-4 animate-pulse">
+            <Activity className="w-10 h-10 text-[#FF6B1A] mx-auto animate-bounce" />
+            <h3 className="text-lg font-bold text-white">Running Multi-Constraint Spatial Models...</h3>
+            <p className="text-xs text-[#9A9A9A] font-mono">Evaluating {selectedResource.name} deployment to {currentZone.name}</p>
+          </div>
+        )}
+
         {/* Side-by-Side Comparison: AI Recommendation vs Manual Baseline */}
-        {analyzed && (
-          <div className="max-w-5xl mx-auto space-y-8">
+        {analyzed && !isAnalyzing && (
+          <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               
               {/* AI Recommended Action Card (Green Accent) */}
-              <div className="p-6 sm:p-8 rounded-2xl bg-[#141414] border-2 border-emerald-500/50 space-y-5 shadow-2xl relative overflow-hidden">
+              <div className="p-6 sm:p-8 rounded-2xl bg-[#141414] border-2 border-emerald-500/50 space-y-5 shadow-2xl relative overflow-hidden group">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-400 to-transparent"></div>
                 <div className="flex items-center justify-between pb-3 border-b border-white/10">
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -132,7 +180,7 @@ export default function Reason() {
                 <div className="space-y-2">
                   <h4 className="text-lg font-bold text-white">{currentRec.action}</h4>
                   <p className="text-xs text-[#9A9A9A]">
-                    Recommended Assets: <strong className="text-slate-200">{currentRec.resourceNeeded}</strong>
+                    Recommended Assets: <strong className="text-slate-200">{selectedResource.name}</strong> from {selectedResource.location}
                   </p>
                 </div>
 
@@ -141,8 +189,9 @@ export default function Reason() {
                   <span className="text-emerald-400 font-extrabold text-base">{currentRec.etaAI}</span>
                 </div>
 
-                <div className="text-[11px] text-[#9A9A9A] leading-relaxed">
-                  ✓ Route elevation profile checked • Bridge load capacity confirmed safe • Automated WhatsApp alert pre-drafted.
+                <div className="text-[11px] text-[#9A9A9A] leading-relaxed flex items-start gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0 mt-0.5" />
+                  <span>Route elevation profile checked • Bridge load capacity confirmed safe • Automated WhatsApp alert pre-drafted.</span>
                 </div>
               </div>
 
@@ -173,8 +222,9 @@ export default function Reason() {
                   <span className="text-red-400 font-extrabold text-base">{currentRec.etaManual}</span>
                 </div>
 
-                <div className="text-[11px] text-slate-500 leading-relaxed">
-                  ✗ Requires multi-tier telephone approvals, unverified roadblock risks, manual WhatsApp broadcast drafting.
+                <div className="text-[11px] text-slate-500 leading-relaxed flex items-start gap-1">
+                  <AlertCircle className="w-3.5 h-3.5 text-red-500 flex-shrink-0 mt-0.5" />
+                  <span>Requires multi-tier telephone approvals, unverified roadblock risks, manual WhatsApp broadcast drafting.</span>
                 </div>
               </div>
 
@@ -189,8 +239,10 @@ export default function Reason() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
                 <div className="p-4 rounded-xl bg-white/5 border border-white/5 space-y-1">
                   <span className="text-[#9A9A9A] font-mono text-[10px] block">RESOURCE AVAILABILITY</span>
-                  <span className="text-white font-semibold">100% Verified in Warehouse</span>
-                  <span className="text-[10px] text-emerald-400 block font-mono">Standby Ready</span>
+                  <span className="text-white font-semibold">{selectedResource.status === 'available' ? '100% Verified in Warehouse' : 'Partial / Deployed'}</span>
+                  <span className={`text-[10px] block font-mono ${selectedResource.status === 'available' ? 'text-emerald-400' : 'text-amber-400'}`}>
+                    {selectedResource.status === 'available' ? 'Standby Ready' : 'Limited availability'}
+                  </span>
                 </div>
 
                 <div className="p-4 rounded-xl bg-white/5 border border-white/5 space-y-1">
@@ -208,30 +260,103 @@ export default function Reason() {
             </div>
 
             {/* Mandatory Human Review Governance Callout Box */}
-            <div className="p-6 rounded-2xl bg-gradient-to-r from-amber-950/40 via-[#141414] to-[#141414] border border-[#FF6B1A]/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className={`p-6 rounded-2xl border transition-all duration-500 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${
+              isApproved 
+                ? 'bg-emerald-950/20 border-emerald-500/40' 
+                : 'bg-gradient-to-r from-amber-950/40 via-[#141414] to-[#141414] border-[#FF6B1A]/40'
+            }`}>
               <div className="flex items-start gap-4">
-                <div className="p-3 rounded-xl bg-[#FF6B1A]/10 border border-[#FF6B1A]/30 text-[#FF6B1A] flex-shrink-0">
-                  <UserCheck className="w-6 h-6" />
+                <div className={`p-3 rounded-xl border flex-shrink-0 ${
+                  isApproved 
+                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' 
+                    : 'bg-[#FF6B1A]/10 border-[#FF6B1A]/30 text-[#FF6B1A]'
+                }`}>
+                  {isApproved ? <ShieldCheck className="w-6 h-6" /> : <UserCheck className="w-6 h-6" />}
                 </div>
                 <div className="space-y-1">
                   <h4 className="text-base font-bold text-white">
-                    Recommendations are generated by AI. Every dispatch requires human review.
+                    {isApproved ? 'Dispatch Authorized & Active' : 'Recommendations are generated by AI. Every dispatch requires human review.'}
                   </h4>
                   <p className="text-xs text-[#9A9A9A]">
-                    STORM provides situational decision support. Official dispatch orders only execute upon authentication by a designated State or District Coordinator.
+                    {isApproved 
+                      ? `Coordinator signature verified. ${selectedResource.name} has been instructed to deploy to ${currentZone.name}.` 
+                      : 'STORM provides situational decision support. Official dispatch orders only execute upon authentication by a designated State or District Coordinator.'}
                   </p>
                 </div>
               </div>
 
-              <span className="px-3.5 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-mono font-bold text-emerald-400 whitespace-nowrap">
-                Officer Sign-Off Required
-              </span>
+              {!isApproved ? (
+                <button
+                  onClick={() => setShowApprovalModal(true)}
+                  className="px-6 py-2.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-xs font-mono font-bold text-white whitespace-nowrap transition-all shadow-lg flex items-center gap-2"
+                >
+                  <Fingerprint className="w-4 h-4 text-[#FF6B1A]" />
+                  Authorize Dispatch
+                </button>
+              ) : (
+                <span className="px-4 py-2 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-500/30 text-xs font-mono font-bold flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4" />
+                  Deployed
+                </span>
+              )}
             </div>
 
           </div>
         )}
 
       </div>
+
+      {/* Approval Modal */}
+      {showApprovalModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-[#141414] border border-white/10 rounded-2xl w-full max-w-md p-6 sm:p-8 space-y-6 shadow-2xl relative">
+            <div className="text-center space-y-2">
+              <div className="w-12 h-12 rounded-full bg-[#FF6B1A]/10 border border-[#FF6B1A]/30 text-[#FF6B1A] flex items-center justify-center mx-auto mb-4">
+                <ShieldCheck className="w-6 h-6" />
+              </div>
+              <h2 className="text-xl font-bold text-white">Coordinator Authorization</h2>
+              <p className="text-xs text-[#9A9A9A]">
+                Confirm dispatch of <strong className="text-slate-200">{selectedResource.name}</strong> to <strong className="text-slate-200">{currentZone.name}</strong>.
+              </p>
+            </div>
+
+            <form onSubmit={handleApprove} className="space-y-4">
+              <div className="space-y-2">
+                <label className="block text-xs font-mono text-slate-400 text-center">
+                  Enter 4-Digit Security PIN (Try '1234')
+                </label>
+                <input
+                  type="password"
+                  maxLength={4}
+                  required
+                  autoFocus
+                  value={approvalPin}
+                  onChange={(e) => setApprovalPin(e.target.value)}
+                  className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl p-4 text-center text-2xl tracking-[1em] text-white focus:outline-none focus:border-[#FF6B1A]"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowApprovalModal(false)}
+                  className="flex-1 py-3 text-xs font-bold text-slate-300 bg-white/5 hover:bg-white/10 rounded-xl transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-3 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl shadow-lg shadow-emerald-900/50 transition-all flex items-center justify-center gap-2"
+                >
+                  <Fingerprint className="w-4 h-4" />
+                  Sign & Execute
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

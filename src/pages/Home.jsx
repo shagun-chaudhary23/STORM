@@ -26,44 +26,44 @@ export default function Home() {
           {/* Left Column: Headline, Subtext, CTAs, Trust Row */}
           <div className="lg:col-span-7 space-y-6">
             
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-white/10 bg-white/5 backdrop-blur-md text-xs font-semibold uppercase tracking-wider text-slate-300">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-white/10 bg-white/5 backdrop-blur-md text-xs font-semibold uppercase tracking-wider text-slate-300 animate-fade-in-up">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
               <span className="text-white">STORM Platform</span>
               <span className="text-[#9A9A9A]">•</span>
               <span className="text-[#FF6B1A]">AI-Speed Detection, Human-Approved Action</span>
             </div>
 
-            <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-white leading-[1.08]">
+            <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-white leading-[1.08] animate-fade-in-up delay-100">
               When coordination fails,{' '}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#FF6B1A] to-[#E8391A]">
                 people die.
               </span>
             </h1>
 
-            <p className="text-base sm:text-lg text-[#9A9A9A] leading-relaxed max-w-2xl">
+            <p className="text-base sm:text-lg text-[#9A9A9A] leading-relaxed max-w-2xl animate-fade-in-up delay-200">
               India faces 400+ disasters a year; the real killer is the coordination gap after the strike — not the disaster itself. STORM synthesizes real-time feeds so human coordinators authorize dispatches in minutes.
             </p>
 
             {/* Two CTAs - Fixed Width Pills */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 pt-2">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 pt-2 animate-fade-in-up delay-300">
               <button
-                onClick={() => navigate('/dashboard')}
-                className="w-48 py-3.5 px-6 text-xs uppercase tracking-wider font-extrabold text-white bg-gradient-to-r from-[#FF6B1A] to-[#E8391A] hover:opacity-95 rounded-full shadow-xl shadow-[#FF6B1A]/25 hover:scale-[1.02] transition-all cursor-pointer inline-flex items-center justify-center gap-2"
+                onClick={() => navigate('/reason')}
+                className="w-56 py-3.5 px-6 text-xs uppercase tracking-wider font-extrabold text-white bg-gradient-to-r from-[#FF6B1A] to-[#E8391A] hover:opacity-95 rounded-full shadow-xl shadow-[#FF6B1A]/25 hover:scale-[1.02] transition-all cursor-pointer inline-flex items-center justify-center gap-2"
               >
-                <span>View Dashboard</span>
+                <span>Launch Reason AI</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
 
               <button
-                onClick={() => navigate('/how-it-works')}
+                onClick={() => navigate('/resources')}
                 className="w-48 py-3.5 px-6 text-xs uppercase tracking-wider font-extrabold text-slate-200 bg-[#141414] hover:bg-[#1a1a1a] border border-white/10 rounded-full transition-all cursor-pointer inline-flex items-center justify-center"
               >
-                How It Works
+                Match Resources
               </button>
             </div>
 
             {/* Trust Row with Checkmarks */}
-            <div className="pt-6 border-t border-white/10 flex flex-wrap items-center gap-6 text-xs text-[#9A9A9A]">
+            <div className="pt-6 border-t border-white/10 flex flex-wrap items-center gap-6 text-xs text-[#9A9A9A] animate-fade-in-up delay-300">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                 <span className="text-slate-300 font-medium">AI-Verified Signals</span>
@@ -81,8 +81,8 @@ export default function Home() {
           </div>
 
           {/* Right Column: Live Detection Status Card */}
-          <div className="lg:col-span-5">
-            <div className="p-6 sm:p-8 rounded-2xl bg-[#141414] border border-white/10 relative overflow-hidden shadow-2xl space-y-6">
+          <div className="lg:col-span-5 animate-fade-in-up delay-200">
+            <div className="p-6 sm:p-8 rounded-2xl bg-[#141414] border border-white/10 relative overflow-hidden shadow-2xl space-y-6 hover:border-[#FF6B1A]/30 transition-colors duration-500">
               
               {/* Header Status Row */}
               <div className="flex items-center justify-between pb-4 border-b border-white/10">
@@ -99,14 +99,17 @@ export default function Home() {
               </div>
 
               {/* Highest Severity Zone Mini Card */}
-              <div className="p-5 rounded-xl bg-[#0A0A0A] border border-red-500/30 space-y-3">
+              <div className="p-5 rounded-xl bg-[#0A0A0A] border border-red-500/30 space-y-3 cursor-pointer hover:bg-[#1a1111] transition-colors" onClick={() => navigate('/report')}>
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] font-mono text-[#9A9A9A] uppercase">Highest Priority Anomaly</span>
                   <span className="px-2.5 py-0.5 rounded-full bg-red-950 text-red-400 border border-red-500/30 text-xs font-mono font-bold">
                     {highestZone.severity} / 10 CRITICAL
                   </span>
                 </div>
-                <h3 className="text-base font-bold text-white">{highestZone.name}</h3>
+                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                  {highestZone.name}
+                  <ChevronRight className="w-4 h-4 text-red-500" />
+                </h3>
                 <div className="text-xs text-[#9A9A9A] flex items-center justify-between">
                   <span>Pop: {highestZone.population.toLocaleString()}</span>
                   <span>Active Incidents: {highestZone.activeIncidents}</span>
@@ -137,10 +140,11 @@ export default function Home() {
               </div>
 
               {/* Bottom Row: Pending Approvals Count */}
-              <div className="pt-4 border-t border-white/10 flex items-center justify-between text-xs">
-                <span className="text-[#9A9A9A]">Pending Officer Orders:</span>
-                <span className="px-3 py-1 rounded-full bg-amber-950 text-amber-400 border border-amber-500/30 font-mono font-bold">
+              <div className="pt-4 border-t border-white/10 flex items-center justify-between text-xs cursor-pointer group" onClick={() => navigate('/reason')}>
+                <span className="text-[#9A9A9A] group-hover:text-white transition-colors">Pending Officer Orders:</span>
+                <span className="px-3 py-1 rounded-full bg-amber-950 text-amber-400 border border-amber-500/30 font-mono font-bold flex items-center gap-1 group-hover:bg-amber-900 transition-colors">
                   {pendingCount} Pending Approvals
+                  <ArrowRight className="w-3 h-3" />
                 </span>
               </div>
 
@@ -152,7 +156,7 @@ export default function Home() {
 
       {/* 2. THREE BOTTLENECK CARDS */}
       <section className="max-w-7xl mx-auto px-4 sm:px-8 mb-24 relative z-10">
-        <div className="text-center max-w-2xl mx-auto space-y-3 mb-12">
+        <div className="text-center max-w-2xl mx-auto space-y-3 mb-12 animate-fade-in-up delay-200">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-white/10 bg-white/5 text-xs font-semibold uppercase tracking-wider text-[#9A9A9A]">
             <AlertTriangle className="w-3.5 h-3.5 text-[#FF6B1A]" />
             <span>The Crisis of Response Latency</span>
@@ -168,7 +172,7 @@ export default function Home() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           
           {/* Card 1 */}
-          <div className="p-6 rounded-2xl card-dark relative group transition-all duration-300 flex flex-col justify-between">
+          <div className="p-6 rounded-2xl card-dark relative group transition-all duration-300 flex flex-col justify-between animate-fade-in-up delay-100">
             <div>
               <div className="flex items-center justify-between mb-4">
                 <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-[#FF6B1A]">
@@ -191,7 +195,7 @@ export default function Home() {
           </div>
 
           {/* Card 2 */}
-          <div className="p-6 rounded-2xl card-dark relative group transition-all duration-300 flex flex-col justify-between">
+          <div className="p-6 rounded-2xl card-dark relative group transition-all duration-300 flex flex-col justify-between animate-fade-in-up delay-200">
             <div>
               <div className="flex items-center justify-between mb-4">
                 <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-[#FF6B1A]">
@@ -214,7 +218,7 @@ export default function Home() {
           </div>
 
           {/* Card 3 */}
-          <div className="p-6 rounded-2xl card-dark relative group transition-all duration-300 flex flex-col justify-between">
+          <div className="p-6 rounded-2xl card-dark relative group transition-all duration-300 flex flex-col justify-between animate-fade-in-up delay-300">
             <div>
               <div className="flex items-center justify-between mb-4">
                 <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-[#FF6B1A]">
@@ -241,7 +245,7 @@ export default function Home() {
 
       {/* 3. SIKKIM 2023 HIGHLIGHTED QUOTE CARD */}
       <section className="max-w-6xl mx-auto px-4 sm:px-8 relative z-10">
-        <div className="p-8 sm:p-10 rounded-2xl bg-[#141414] border-l-4 border-l-[#FF6B1A] border border-white/10 relative overflow-hidden shadow-2xl space-y-4">
+        <div className="p-8 sm:p-10 rounded-2xl bg-[#141414] border-l-4 border-l-[#FF6B1A] border border-white/10 relative overflow-hidden shadow-2xl space-y-4 animate-fade-in-up delay-200 hover:border-l-emerald-500 transition-colors duration-500">
           <div className="flex items-center justify-between">
             <span className="px-3 py-1 rounded-full bg-red-950 text-red-400 border border-red-500/30 text-xs font-mono font-bold uppercase tracking-wider">
               Real Citation Case Study
@@ -265,7 +269,10 @@ export default function Home() {
 
             <div className="px-4 py-2 rounded-full bg-white/5 border border-white/10 text-right">
               <span className="text-[10px] text-slate-500 font-mono block">STORM Target Acceleration</span>
-              <span className="text-xs font-bold text-[#FF6B1A]">~30-60 Min to AI Recommendation</span>
+              <span className="text-xs font-bold text-emerald-400 flex items-center justify-end gap-1">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                ~30-60 Min to AI Recommendation
+              </span>
             </div>
           </div>
         </div>
