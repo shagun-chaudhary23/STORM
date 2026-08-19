@@ -1,11 +1,58 @@
+require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const axios = require('axios');
+const { GoogleGenAI } = require('@google/genai');
 
 const app = express();
 app.use(cors());
+app.use(express.json());
+
+app.post('/api/analyze', async (req, res) => {
+  try {
+    const { zone, resource } = req.body;
+    
+    if (!process.env.GEMINI_API_KEY) {
+      return res.status(400).json({ error: 'GEMINI_API_KEY is not set on the server.' });
+    }
+
+    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    
+    const prompt = `You are a Disaster Coordination AI.
+Input Zone: ${JSON.stringify(zone)}
+Available Resource: ${JSON.stringify(resource)}
+
+Generate a dispatch recommendation based on the severity, population, and resource status.
+Return ONLY a valid JSON object matching exactly this structure:
+{
+  "action": "Brief description of dispatch action (e.g., Deploy 2 units to Sector X)",
+  "etaAI": "Estimated time string (e.g., '15 mins')",
+  "etaManual": "Estimated manual time string (e.g., '2 hrs')",
+  "confidence": <integer between 80 and 99>,
+  "resourceNeeded": "${resource.name}",
+  "keyFactors": ["factor 1", "factor 2"]
+}`;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-3.6-flash',
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json"
+      }
+    });
+
+    const resultJson = JSON.parse(response.text);
+    resultJson.id = 'AI-' + Date.now();
+    resultJson.zone = zone.id;
+    
+    res.json(resultJson);
+  } catch (err) {
+    console.error('AI Analysis Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 const server = http.createServer(app);
 const io = new Server(server, {

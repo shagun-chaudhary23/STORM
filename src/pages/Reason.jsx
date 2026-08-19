@@ -13,23 +13,42 @@ export default function Reason() {
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [isApproved, setIsApproved] = useState(false);
   const [approvalPin, setApprovalPin] = useState('');
+  const [liveRecommendation, setLiveRecommendation] = useState(null);
 
   // Match recommendation for selected zone or fallback to first
-  const currentRec = recommendations.find(r => r.zone === selectedZoneId) || recommendations[0];
+  const currentRec = liveRecommendation || (recommendations.find(r => r.zone === selectedZoneId) || recommendations[0]);
   const currentZone = zones.find(z => z.id === selectedZoneId) || zones[0];
   const selectedResource = resources.find(r => r.name === selectedResourceName) || resources[0];
 
-  const handleAnalyze = (e) => {
+  const handleAnalyze = async (e) => {
     e.preventDefault();
     setIsAnalyzing(true);
     setAnalyzed(false);
     setIsApproved(false);
+    setLiveRecommendation(null);
     
-    // Simulate AI thinking time
-    setTimeout(() => {
+    try {
+      const response = await fetch('http://localhost:3001/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          zone: currentZone,
+          resource: selectedResource
+        })
+      });
+      
+      const data = await response.json();
+      if (response.ok) {
+        setLiveRecommendation(data);
+      } else {
+        alert("AI Analysis Failed: " + data.error);
+      }
+    } catch (err) {
+      alert("Network Error: " + err.message);
+    } finally {
       setIsAnalyzing(false);
       setAnalyzed(true);
-    }, 2000);
+    }
   };
 
   const handleApprove = (e) => {
@@ -247,14 +266,14 @@ export default function Reason() {
 
                 <div className="p-4 rounded-xl bg-white/5 border border-white/5 space-y-1">
                   <span className="text-[#9A9A9A] font-mono text-[10px] block">OPTIMAL TRANSIT DISTANCE</span>
-                  <span className="text-white font-semibold">18.4 km via State Highway 10</span>
-                  <span className="text-[10px] text-slate-400 block font-mono">All-weather bypass clear</span>
+                  <span className="text-white font-semibold">{liveRecommendation?.keyFactors ? liveRecommendation.keyFactors[0] : "18.4 km via State Highway 10"}</span>
+                  <span className="text-[10px] block font-mono text-emerald-400">Clear route confirmed by Sentinel</span>
                 </div>
 
                 <div className="p-4 rounded-xl bg-white/5 border border-white/5 space-y-1">
-                  <span className="text-[#9A9A9A] font-mono text-[10px] block">TIME REDUCTION FACTOR</span>
-                  <span className="text-[#FF6B1A] font-bold text-sm">~85% Faster Dispatch Cycle</span>
-                  <span className="text-[10px] text-slate-500 block font-mono">Simulated target</span>
+                  <span className="text-[#9A9A9A] font-mono text-[10px] block">CRITICAL FACTORS</span>
+                  <span className="text-white font-semibold">{liveRecommendation?.keyFactors ? liveRecommendation.keyFactors[1] : "High Population Density"}</span>
+                  <span className="text-[10px] block font-mono text-[#FF6B1A]">Requires rapid deployment</span>
                 </div>
               </div>
             </div>

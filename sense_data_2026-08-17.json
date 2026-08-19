@@ -1,0 +1,1421 @@
+{
+  "earthquakes": {
+    "type": "FeatureCollection",
+    "metadata": {
+      "generated": 1787148888000,
+      "url": "https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&starttime=2026-08-03&endtime=2026-08-17&minmagnitude=2.5&minlatitude=6&maxlatitude=37&minlongitude=68&maxlongitude=97",
+      "title": "USGS Earthquakes",
+      "status": 200,
+      "api": "2.7.0",
+      "count": 17
+    },
+    "features": [
+      {
+        "type": "Feature",
+        "properties": {
+          "mag": 4.2,
+          "place": "23 km NE of Jurm, Afghanistan",
+          "time": 1786662717925,
+          "updated": 1786669868040,
+          "tz": null,
+          "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000tkkb",
+          "detail": "https://earthquake.usgs.gov/fdsnws/event/1/query?eventid=us6000tkkb&format=geojson",
+          "felt": null,
+          "cdi": null,
+          "mmi": null,
+          "alert": null,
+          "status": "reviewed",
+          "tsunami": 0,
+          "sig": 271,
+          "net": "us",
+          "code": "6000tkkb",
+          "ids": ",us6000tkkb,",
+          "sources": ",us,",
+          "types": ",origin,phase-data,",
+          "nst": 18,
+          "dmin": 1.752,
+          "rms": 0.39,
+          "gap": 172,
+          "magType": "mb",
+          "type": "earthquake",
+          "title": "M 4.2 - 23 km NE of Jurm, Afghanistan"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            71.0489,
+            36.9807,
+            110.31
+          ]
+        },
+        "id": "us6000tkkb"
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "mag": 4.3,
+          "place": "70 km NNW of Barishal, Pakistan",
+          "time": 1786595053980,
+          "updated": 1786596174040,
+          "tz": null,
+          "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000tkdf",
+          "detail": "https://earthquake.usgs.gov/fdsnws/event/1/query?eventid=us6000tkdf&format=geojson",
+          "felt": null,
+          "cdi": null,
+          "mmi": null,
+          "alert": null,
+          "status": "reviewed",
+          "tsunami": 0,
+          "sig": 284,
+          "net": "us",
+          "code": "6000tkdf",
+          "ids": ",us6000tkdf,",
+          "sources": ",us,",
+          "types": ",origin,phase-data,",
+          "nst": 38,
+          "dmin": 2.026,
+          "rms": 1.13,
+          "gap": 81,
+          "magType": "mb",
+          "type": "earthquake",
+          "title": "M 4.3 - 70 km NNW of Barishal, Pakistan"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            74.2629,
+            36.8572,
+            57.968
+          ]
+        },
+        "id": "us6000tkdf"
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "mag": 5.1,
+          "place": "59 km NNW of Barishal, Pakistan",
+          "time": 1786581318815,
+          "updated": 1786585987806,
+          "tz": null,
+          "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000tkci",
+          "detail": "https://earthquake.usgs.gov/fdsnws/event/1/query?eventid=us6000tkci&format=geojson",
+          "felt": 1,
+          "cdi": 2,
+          "mmi": null,
+          "alert": null,
+          "status": "reviewed",
+          "tsunami": 0,
+          "sig": 400,
+          "net": "us",
+          "code": "6000tkci",
+          "ids": ",us6000tkci,usauto6000tkci,",
+          "sources": ",us,usauto,",
+          "types": ",dyfi,internal-moment-tensor,origin,phase-data,",
+          "nst": 93,
+          "dmin": 2.131,
+          "rms": 0.91,
+          "gap": 28,
+          "magType": "mww",
+          "type": "earthquake",
+          "title": "M 5.1 - 59 km NNW of Barishal, Pakistan"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            74.3579,
+            36.7849,
+            58.893
+          ]
+        },
+        "id": "us6000tkci"
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "mag": 4.2,
+          "place": "53 km S of Jurm, Afghanistan",
+          "time": 1786534141367,
+          "updated": 1787128990040,
+          "tz": null,
+          "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000tk6z",
+          "detail": "https://earthquake.usgs.gov/fdsnws/event/1/query?eventid=us6000tk6z&format=geojson",
+          "felt": null,
+          "cdi": null,
+          "mmi": null,
+          "alert": null,
+          "status": "reviewed",
+          "tsunami": 0,
+          "sig": 271,
+          "net": "us",
+          "code": "6000tk6z",
+          "ids": ",us6000tk6z,",
+          "sources": ",us,",
+          "types": ",origin,phase-data,",
+          "nst": 41,
+          "dmin": 2.298,
+          "rms": 0.94,
+          "gap": 74,
+          "magType": "mb",
+          "type": "earthquake",
+          "title": "M 4.2 - 53 km S of Jurm, Afghanistan"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            70.9096,
+            36.3843,
+            143.607
+          ]
+        },
+        "id": "us6000tk6z"
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "mag": 4,
+          "place": "20 km S of Jurm, Afghanistan",
+          "time": 1786528552082,
+          "updated": 1787126471040,
+          "tz": null,
+          "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000tk6k",
+          "detail": "https://earthquake.usgs.gov/fdsnws/event/1/query?eventid=us6000tk6k&format=geojson",
+          "felt": null,
+          "cdi": null,
+          "mmi": null,
+          "alert": null,
+          "status": "reviewed",
+          "tsunami": 0,
+          "sig": 246,
+          "net": "us",
+          "code": "6000tk6k",
+          "ids": ",us6000tk6k,",
+          "sources": ",us,",
+          "types": ",origin,phase-data,",
+          "nst": 37,
+          "dmin": 2.068,
+          "rms": 0.71,
+          "gap": 104,
+          "magType": "mb",
+          "type": "earthquake",
+          "title": "M 4.0 - 20 km S of Jurm, Afghanistan"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            70.8776,
+            36.6841,
+            236.122
+          ]
+        },
+        "id": "us6000tk6k"
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "mag": 4.1,
+          "place": "30 km SSE of Jurm, Afghanistan",
+          "time": 1786494412526,
+          "updated": 1786508651040,
+          "tz": null,
+          "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000tk4d",
+          "detail": "https://earthquake.usgs.gov/fdsnws/event/1/query?eventid=us6000tk4d&format=geojson",
+          "felt": null,
+          "cdi": null,
+          "mmi": null,
+          "alert": null,
+          "status": "reviewed",
+          "tsunami": 0,
+          "sig": 259,
+          "net": "us",
+          "code": "6000tk4d",
+          "ids": ",us6000tk4d,",
+          "sources": ",us,",
+          "types": ",origin,phase-data,",
+          "nst": 35,
+          "dmin": 2.041,
+          "rms": 0.49,
+          "gap": 85,
+          "magType": "mb",
+          "type": "earthquake",
+          "title": "M 4.1 - 30 km SSE of Jurm, Afghanistan"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            71.0188,
+            36.6352,
+            207.202
+          ]
+        },
+        "id": "us6000tk4d"
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "mag": 4.6,
+          "place": "14 km NE of Wana, Pakistan",
+          "time": 1786484224529,
+          "updated": 1786498185040,
+          "tz": null,
+          "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000tk33",
+          "detail": "https://earthquake.usgs.gov/fdsnws/event/1/query?eventid=us6000tk33&format=geojson",
+          "felt": null,
+          "cdi": null,
+          "mmi": null,
+          "alert": null,
+          "status": "reviewed",
+          "tsunami": 0,
+          "sig": 326,
+          "net": "us",
+          "code": "6000tk33",
+          "ids": ",us6000tk33,",
+          "sources": ",us,",
+          "types": ",origin,phase-data,",
+          "nst": 39,
+          "dmin": 2.171,
+          "rms": 0.62,
+          "gap": 102,
+          "magType": "mb",
+          "type": "earthquake",
+          "title": "M 4.6 - 14 km NE of Wana, Pakistan"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            69.6826,
+            32.3871,
+            43.011
+          ]
+        },
+        "id": "us6000tk33"
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "mag": 4.9,
+          "place": "149 km SSE of Port Blair, India",
+          "time": 1786478141269,
+          "updated": 1786479155040,
+          "tz": null,
+          "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000tk1m",
+          "detail": "https://earthquake.usgs.gov/fdsnws/event/1/query?eventid=us6000tk1m&format=geojson",
+          "felt": null,
+          "cdi": null,
+          "mmi": null,
+          "alert": null,
+          "status": "reviewed",
+          "tsunami": 0,
+          "sig": 369,
+          "net": "us",
+          "code": "6000tk1m",
+          "ids": ",us6000tk1m,",
+          "sources": ",us,",
+          "types": ",origin,phase-data,",
+          "nst": 67,
+          "dmin": 6.472,
+          "rms": 0.81,
+          "gap": 43,
+          "magType": "mb",
+          "type": "earthquake",
+          "title": "M 4.9 - 149 km SSE of Port Blair, India"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            93.4884,
+            10.5351,
+            113.482
+          ]
+        },
+        "id": "us6000tk1m"
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "mag": 4.3,
+          "place": "14 km ENE of Barkot, India",
+          "time": 1786305092991,
+          "updated": 1786325740553,
+          "tz": null,
+          "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000tjh9",
+          "detail": "https://earthquake.usgs.gov/fdsnws/event/1/query?eventid=us6000tjh9&format=geojson",
+          "felt": 2,
+          "cdi": 2.7,
+          "mmi": null,
+          "alert": null,
+          "status": "reviewed",
+          "tsunami": 0,
+          "sig": 285,
+          "net": "us",
+          "code": "6000tjh9",
+          "ids": ",us6000tjh9,",
+          "sources": ",us,",
+          "types": ",dyfi,origin,phase-data,",
+          "nst": 43,
+          "dmin": 5.116,
+          "rms": 0.37,
+          "gap": 99,
+          "magType": "mb",
+          "type": "earthquake",
+          "title": "M 4.3 - 14 km ENE of Barkot, India"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            78.3442,
+            30.868,
+            10
+          ]
+        },
+        "id": "us6000tjh9"
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "mag": 5,
+          "place": "180 km NW of Sabang, Indonesia",
+          "time": 1786244527086,
+          "updated": 1786245678040,
+          "tz": null,
+          "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000tjcl",
+          "detail": "https://earthquake.usgs.gov/fdsnws/event/1/query?eventid=us6000tjcl&format=geojson",
+          "felt": null,
+          "cdi": null,
+          "mmi": null,
+          "alert": null,
+          "status": "reviewed",
+          "tsunami": 0,
+          "sig": 385,
+          "net": "us",
+          "code": "6000tjcl",
+          "ids": ",us6000tjcl,",
+          "sources": ",us,",
+          "types": ",origin,phase-data,",
+          "nst": 53,
+          "dmin": 3.308,
+          "rms": 0.84,
+          "gap": 65,
+          "magType": "mb",
+          "type": "earthquake",
+          "title": "M 5.0 - 180 km NW of Sabang, Indonesia"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            94.1402,
+            7.017,
+            10
+          ]
+        },
+        "id": "us6000tjcl"
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "mag": 3.8,
+          "place": "30 km NW of Nashik, India",
+          "time": 1786206658034,
+          "updated": 1786478365636,
+          "tz": null,
+          "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000tjd3",
+          "detail": "https://earthquake.usgs.gov/fdsnws/event/1/query?eventid=us6000tjd3&format=geojson",
+          "felt": 7,
+          "cdi": 4.1,
+          "mmi": null,
+          "alert": null,
+          "status": "reviewed",
+          "tsunami": 0,
+          "sig": 225,
+          "net": "us",
+          "code": "6000tjd3",
+          "ids": ",us6000tjd3,",
+          "sources": ",us,",
+          "types": ",dyfi,origin,phase-data,",
+          "nst": 12,
+          "dmin": 13.382,
+          "rms": 0.52,
+          "gap": 193,
+          "magType": "mb",
+          "type": "earthquake",
+          "title": "M 3.8 - 30 km NW of Nashik, India"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            73.613,
+            20.2183,
+            10
+          ]
+        },
+        "id": "us6000tjd3"
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "mag": 4.5,
+          "place": "2 km ESE of Mehmand Chak, Pakistan",
+          "time": 1786159804685,
+          "updated": 1786165077539,
+          "tz": null,
+          "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000tj67",
+          "detail": "https://earthquake.usgs.gov/fdsnws/event/1/query?eventid=us6000tj67&format=geojson",
+          "felt": 4,
+          "cdi": 4.2,
+          "mmi": null,
+          "alert": null,
+          "status": "reviewed",
+          "tsunami": 0,
+          "sig": 313,
+          "net": "us",
+          "code": "6000tj67",
+          "ids": ",us6000tj67,",
+          "sources": ",us,",
+          "types": ",dyfi,origin,phase-data,",
+          "nst": 36,
+          "dmin": 0.998,
+          "rms": 1.24,
+          "gap": 225,
+          "magType": "mb",
+          "type": "earthquake",
+          "title": "M 4.5 - 2 km ESE of Mehmand Chak, Pakistan"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            73.853,
+            32.7786,
+            10
+          ]
+        },
+        "id": "us6000tj67"
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "mag": 4.5,
+          "place": "23 km ESE of Khandūd, Afghanistan",
+          "time": 1786114533817,
+          "updated": 1786128527040,
+          "tz": null,
+          "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000tiyy",
+          "detail": "https://earthquake.usgs.gov/fdsnws/event/1/query?eventid=us6000tiyy&format=geojson",
+          "felt": null,
+          "cdi": null,
+          "mmi": null,
+          "alert": null,
+          "status": "reviewed",
+          "tsunami": 0,
+          "sig": 312,
+          "net": "us",
+          "code": "6000tiyy",
+          "ids": ",us6000tiyy,",
+          "sources": ",us,",
+          "types": ",origin,phase-data,",
+          "nst": 41,
+          "dmin": 1.451,
+          "rms": 0.99,
+          "gap": 150,
+          "magType": "mb",
+          "type": "earthquake",
+          "title": "M 4.5 - 23 km ESE of Khandūd, Afghanistan"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            72.5557,
+            36.8607,
+            10
+          ]
+        },
+        "id": "us6000tiyy"
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "mag": 4.2,
+          "place": "30 km ENE of Shwebo, Burma (Myanmar)",
+          "time": 1786048368799,
+          "updated": 1786050071040,
+          "tz": null,
+          "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000tiq3",
+          "detail": "https://earthquake.usgs.gov/fdsnws/event/1/query?eventid=us6000tiq3&format=geojson",
+          "felt": null,
+          "cdi": null,
+          "mmi": null,
+          "alert": null,
+          "status": "reviewed",
+          "tsunami": 0,
+          "sig": 271,
+          "net": "us",
+          "code": "6000tiq3",
+          "ids": ",us6000tiq3,",
+          "sources": ",us,",
+          "types": ",origin,phase-data,",
+          "nst": 17,
+          "dmin": 1.768,
+          "rms": 0.47,
+          "gap": 94,
+          "magType": "mb",
+          "type": "earthquake",
+          "title": "M 4.2 - 30 km ENE of Shwebo, Burma (Myanmar)"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            95.9588,
+            22.6929,
+            10
+          ]
+        },
+        "id": "us6000tiq3"
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "mag": 4.8,
+          "place": "62 km NNE of Shi Yomi, India",
+          "time": 1785975317634,
+          "updated": 1785982166479,
+          "tz": null,
+          "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000tigl",
+          "detail": "https://earthquake.usgs.gov/fdsnws/event/1/query?eventid=us6000tigl&format=geojson",
+          "felt": 2,
+          "cdi": 3.8,
+          "mmi": null,
+          "alert": null,
+          "status": "reviewed",
+          "tsunami": 0,
+          "sig": 355,
+          "net": "us",
+          "code": "6000tigl",
+          "ids": ",us6000tigl,",
+          "sources": ",us,",
+          "types": ",dyfi,origin,phase-data,",
+          "nst": 56,
+          "dmin": 7.792,
+          "rms": 1,
+          "gap": 91,
+          "magType": "mb",
+          "type": "earthquake",
+          "title": "M 4.8 - 62 km NNE of Shi Yomi, India"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            94.6765,
+            29.0283,
+            10
+          ]
+        },
+        "id": "us6000tigl"
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "mag": 5,
+          "place": "60 km NNE of Shi Yomi, India",
+          "time": 1785924369955,
+          "updated": 1785938361452,
+          "tz": null,
+          "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000ti9w",
+          "detail": "https://earthquake.usgs.gov/fdsnws/event/1/query?eventid=us6000ti9w&format=geojson",
+          "felt": 3,
+          "cdi": 2,
+          "mmi": null,
+          "alert": null,
+          "status": "reviewed",
+          "tsunami": 0,
+          "sig": 385,
+          "net": "us",
+          "code": "6000ti9w",
+          "ids": ",us6000ti9w,",
+          "sources": ",us,",
+          "types": ",dyfi,origin,phase-data,",
+          "nst": 68,
+          "dmin": 7.766,
+          "rms": 0.8,
+          "gap": 59,
+          "magType": "mb",
+          "type": "earthquake",
+          "title": "M 5.0 - 60 km NNE of Shi Yomi, India"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            94.681,
+            29.0027,
+            10
+          ]
+        },
+        "id": "us6000ti9w"
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "mag": 4.8,
+          "place": "56 km WSW of Monywa, Burma (Myanmar)",
+          "time": 1785888718154,
+          "updated": 1787015293280,
+          "tz": null,
+          "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000ti5u",
+          "detail": "https://earthquake.usgs.gov/fdsnws/event/1/query?eventid=us6000ti5u&format=geojson",
+          "felt": 2,
+          "cdi": 3.4,
+          "mmi": null,
+          "alert": null,
+          "status": "reviewed",
+          "tsunami": 0,
+          "sig": 355,
+          "net": "us",
+          "code": "6000ti5u",
+          "ids": ",us6000ti5u,",
+          "sources": ",us,",
+          "types": ",dyfi,origin,phase-data,",
+          "nst": 123,
+          "dmin": 0.709,
+          "rms": 0.65,
+          "gap": 26,
+          "magType": "mb",
+          "type": "earthquake",
+          "title": "M 4.8 - 56 km WSW of Monywa, Burma (Myanmar)"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            94.6484,
+            21.8724,
+            107.563
+          ]
+        },
+        "id": "us6000ti5u"
+      }
+    ],
+    "bbox": [
+      69.6826,
+      7.017,
+      10,
+      95.9588,
+      36.9807,
+      236.122
+    ]
+  },
+  "weather": {
+    "Delhi": {
+      "latitude": 28.576448,
+      "longitude": 77.18678,
+      "generationtime_ms": 0.24461746215820312,
+      "utc_offset_seconds": 19800,
+      "timezone": "Asia/Kolkata",
+      "timezone_abbreviation": "GMT+5:30",
+      "elevation": 214,
+      "current_units": {
+        "time": "iso8601",
+        "interval": "seconds",
+        "temperature_2m": "°C",
+        "precipitation": "mm",
+        "weather_code": "wmo code",
+        "wind_speed_10m": "km/h"
+      },
+      "current": {
+        "time": "2026-08-19T19:30",
+        "interval": 900,
+        "temperature_2m": 31,
+        "precipitation": 0,
+        "weather_code": 1,
+        "wind_speed_10m": 2.9
+      },
+      "daily_units": {
+        "time": "iso8601",
+        "precipitation_sum": "mm",
+        "precipitation_probability_max": "%",
+        "wind_speed_10m_max": "km/h"
+      },
+      "daily": {
+        "time": [
+          "2026-08-19",
+          "2026-08-20",
+          "2026-08-21"
+        ],
+        "precipitation_sum": [
+          0.6,
+          2.8,
+          3.6
+        ],
+        "precipitation_probability_max": [
+          51,
+          71,
+          69
+        ],
+        "wind_speed_10m_max": [
+          7.5,
+          5.1,
+          8.4
+        ]
+      }
+    },
+    "Mumbai": {
+      "latitude": 19.086115,
+      "longitude": 72.85291,
+      "generationtime_ms": 0.17690658569335938,
+      "utc_offset_seconds": 19800,
+      "timezone": "Asia/Kolkata",
+      "timezone_abbreviation": "GMT+5:30",
+      "elevation": 6,
+      "current_units": {
+        "time": "iso8601",
+        "interval": "seconds",
+        "temperature_2m": "°C",
+        "precipitation": "mm",
+        "weather_code": "wmo code",
+        "wind_speed_10m": "km/h"
+      },
+      "current": {
+        "time": "2026-08-19T19:30",
+        "interval": 900,
+        "temperature_2m": 27.3,
+        "precipitation": 0,
+        "weather_code": 3,
+        "wind_speed_10m": 14.6
+      },
+      "daily_units": {
+        "time": "iso8601",
+        "precipitation_sum": "mm",
+        "precipitation_probability_max": "%",
+        "wind_speed_10m_max": "km/h"
+      },
+      "daily": {
+        "time": [
+          "2026-08-19",
+          "2026-08-20",
+          "2026-08-21"
+        ],
+        "precipitation_sum": [
+          5.1,
+          5.3,
+          6.6
+        ],
+        "precipitation_probability_max": [
+          100,
+          100,
+          96
+        ],
+        "wind_speed_10m_max": [
+          18.1,
+          18.3,
+          18.6
+        ]
+      }
+    },
+    "Kolkata": {
+      "latitude": 22.601053,
+      "longitude": 88.31776,
+      "generationtime_ms": 0.31626224517822266,
+      "utc_offset_seconds": 19800,
+      "timezone": "Asia/Kolkata",
+      "timezone_abbreviation": "GMT+5:30",
+      "elevation": 12,
+      "current_units": {
+        "time": "iso8601",
+        "interval": "seconds",
+        "temperature_2m": "°C",
+        "precipitation": "mm",
+        "weather_code": "wmo code",
+        "wind_speed_10m": "km/h"
+      },
+      "current": {
+        "time": "2026-08-19T19:30",
+        "interval": 900,
+        "temperature_2m": 28.8,
+        "precipitation": 0,
+        "weather_code": 0,
+        "wind_speed_10m": 9.4
+      },
+      "daily_units": {
+        "time": "iso8601",
+        "precipitation_sum": "mm",
+        "precipitation_probability_max": "%",
+        "wind_speed_10m_max": "km/h"
+      },
+      "daily": {
+        "time": [
+          "2026-08-19",
+          "2026-08-20",
+          "2026-08-21"
+        ],
+        "precipitation_sum": [
+          4.3,
+          2.7,
+          14.5
+        ],
+        "precipitation_probability_max": [
+          76,
+          97,
+          95
+        ],
+        "wind_speed_10m_max": [
+          12,
+          11.7,
+          10.7
+        ]
+      }
+    },
+    "Chennai": {
+      "latitude": 13.110721,
+      "longitude": 80.2459,
+      "generationtime_ms": 0.1704692840576172,
+      "utc_offset_seconds": 19800,
+      "timezone": "Asia/Kolkata",
+      "timezone_abbreviation": "GMT+5:30",
+      "elevation": 12,
+      "current_units": {
+        "time": "iso8601",
+        "interval": "seconds",
+        "temperature_2m": "°C",
+        "precipitation": "mm",
+        "weather_code": "wmo code",
+        "wind_speed_10m": "km/h"
+      },
+      "current": {
+        "time": "2026-08-19T19:30",
+        "interval": 900,
+        "temperature_2m": 28.8,
+        "precipitation": 0,
+        "weather_code": 2,
+        "wind_speed_10m": 14.3
+      },
+      "daily_units": {
+        "time": "iso8601",
+        "precipitation_sum": "mm",
+        "precipitation_probability_max": "%",
+        "wind_speed_10m_max": "km/h"
+      },
+      "daily": {
+        "time": [
+          "2026-08-19",
+          "2026-08-20",
+          "2026-08-21"
+        ],
+        "precipitation_sum": [
+          7.8,
+          2,
+          2.2
+        ],
+        "precipitation_probability_max": [
+          100,
+          92,
+          37
+        ],
+        "wind_speed_10m_max": [
+          15.5,
+          16.6,
+          15.8
+        ]
+      }
+    },
+    "Bengaluru": {
+      "latitude": 12.970123,
+      "longitude": 77.56364,
+      "generationtime_ms": 0.16427040100097656,
+      "utc_offset_seconds": 19800,
+      "timezone": "Asia/Kolkata",
+      "timezone_abbreviation": "GMT+5:30",
+      "elevation": 910,
+      "current_units": {
+        "time": "iso8601",
+        "interval": "seconds",
+        "temperature_2m": "°C",
+        "precipitation": "mm",
+        "weather_code": "wmo code",
+        "wind_speed_10m": "km/h"
+      },
+      "current": {
+        "time": "2026-08-19T19:30",
+        "interval": 900,
+        "temperature_2m": 22.7,
+        "precipitation": 0,
+        "weather_code": 3,
+        "wind_speed_10m": 10.9
+      },
+      "daily_units": {
+        "time": "iso8601",
+        "precipitation_sum": "mm",
+        "precipitation_probability_max": "%",
+        "wind_speed_10m_max": "km/h"
+      },
+      "daily": {
+        "time": [
+          "2026-08-19",
+          "2026-08-20",
+          "2026-08-21"
+        ],
+        "precipitation_sum": [
+          7.1,
+          2.7,
+          0.9
+        ],
+        "precipitation_probability_max": [
+          98,
+          65,
+          18
+        ],
+        "wind_speed_10m_max": [
+          17.6,
+          17.1,
+          17.4
+        ]
+      }
+    },
+    "Hyderabad": {
+      "latitude": 17.398945,
+      "longitude": 78.457085,
+      "generationtime_ms": 0.23174285888671875,
+      "utc_offset_seconds": 19800,
+      "timezone": "Asia/Kolkata",
+      "timezone_abbreviation": "GMT+5:30",
+      "elevation": 505,
+      "current_units": {
+        "time": "iso8601",
+        "interval": "seconds",
+        "temperature_2m": "°C",
+        "precipitation": "mm",
+        "weather_code": "wmo code",
+        "wind_speed_10m": "km/h"
+      },
+      "current": {
+        "time": "2026-08-19T19:30",
+        "interval": 900,
+        "temperature_2m": 25.7,
+        "precipitation": 0.1,
+        "weather_code": 51,
+        "wind_speed_10m": 7.2
+      },
+      "daily_units": {
+        "time": "iso8601",
+        "precipitation_sum": "mm",
+        "precipitation_probability_max": "%",
+        "wind_speed_10m_max": "km/h"
+      },
+      "daily": {
+        "time": [
+          "2026-08-19",
+          "2026-08-20",
+          "2026-08-21"
+        ],
+        "precipitation_sum": [
+          3.3,
+          2.4,
+          0
+        ],
+        "precipitation_probability_max": [
+          57,
+          46,
+          41
+        ],
+        "wind_speed_10m_max": [
+          16.6,
+          18.6,
+          19.4
+        ]
+      }
+    },
+    "Ahmedabad": {
+      "latitude": 23.022846,
+      "longitude": 72.60188,
+      "generationtime_ms": 0.17392635345458984,
+      "utc_offset_seconds": 19800,
+      "timezone": "Asia/Kolkata",
+      "timezone_abbreviation": "GMT+5:30",
+      "elevation": 53,
+      "current_units": {
+        "time": "iso8601",
+        "interval": "seconds",
+        "temperature_2m": "°C",
+        "precipitation": "mm",
+        "weather_code": "wmo code",
+        "wind_speed_10m": "km/h"
+      },
+      "current": {
+        "time": "2026-08-19T19:30",
+        "interval": 900,
+        "temperature_2m": 30,
+        "precipitation": 0,
+        "weather_code": 2,
+        "wind_speed_10m": 8.8
+      },
+      "daily_units": {
+        "time": "iso8601",
+        "precipitation_sum": "mm",
+        "precipitation_probability_max": "%",
+        "wind_speed_10m_max": "km/h"
+      },
+      "daily": {
+        "time": [
+          "2026-08-19",
+          "2026-08-20",
+          "2026-08-21"
+        ],
+        "precipitation_sum": [
+          1.2,
+          2.1,
+          1.5
+        ],
+        "precipitation_probability_max": [
+          92,
+          88,
+          63
+        ],
+        "wind_speed_10m_max": [
+          13.2,
+          12.6,
+          12.6
+        ]
+      }
+    },
+    "Pune": {
+      "latitude": 18.523726,
+      "longitude": 73.86876,
+      "generationtime_ms": 0.2841949462890625,
+      "utc_offset_seconds": 19800,
+      "timezone": "Asia/Kolkata",
+      "timezone_abbreviation": "GMT+5:30",
+      "elevation": 561,
+      "current_units": {
+        "time": "iso8601",
+        "interval": "seconds",
+        "temperature_2m": "°C",
+        "precipitation": "mm",
+        "weather_code": "wmo code",
+        "wind_speed_10m": "km/h"
+      },
+      "current": {
+        "time": "2026-08-19T19:30",
+        "interval": 900,
+        "temperature_2m": 23.5,
+        "precipitation": 0,
+        "weather_code": 3,
+        "wind_speed_10m": 14.4
+      },
+      "daily_units": {
+        "time": "iso8601",
+        "precipitation_sum": "mm",
+        "precipitation_probability_max": "%",
+        "wind_speed_10m_max": "km/h"
+      },
+      "daily": {
+        "time": [
+          "2026-08-19",
+          "2026-08-20",
+          "2026-08-21"
+        ],
+        "precipitation_sum": [
+          0.4,
+          2.5,
+          1.9
+        ],
+        "precipitation_probability_max": [
+          94,
+          84,
+          55
+        ],
+        "wind_speed_10m_max": [
+          20.1,
+          21.5,
+          20.4
+        ]
+      }
+    }
+  },
+  "oqapi": {
+    "error": "HTTP 404: <!DOCTYPE html><html>    <head>        <title>C..."
+  },
+  "ors": {
+    "type": "FeatureCollection",
+    "bbox": [
+      77.176284,
+      28.586954,
+      77.233645,
+      28.626449
+    ],
+    "features": [
+      {
+        "type": "Feature",
+        "properties": {
+          "group_index": 0,
+          "value": 300,
+          "center": [
+            77.20893817835842,
+            28.612900202836347
+          ]
+        },
+        "geometry": {
+          "coordinates": [
+            [
+              [
+                77.190186,
+                28.620192
+              ],
+              [
+                77.18953,
+                28.619226
+              ],
+              [
+                77.189113,
+                28.618445
+              ],
+              [
+                77.188904,
+                28.618008
+              ],
+              [
+                77.188748,
+                28.617623
+              ],
+              [
+                77.188621,
+                28.617251
+              ],
+              [
+                77.188408,
+                28.616485
+              ],
+              [
+                77.188235,
+                28.615569
+              ],
+              [
+                77.188178,
+                28.614999
+              ],
+              [
+                77.188152,
+                28.614417
+              ],
+              [
+                77.188179,
+                28.613737
+              ],
+              [
+                77.188247,
+                28.613145
+              ],
+              [
+                77.185132,
+                28.606419
+              ],
+              [
+                77.179091,
+                28.605788
+              ],
+              [
+                77.176683,
+                28.603111
+              ],
+              [
+                77.176284,
+                28.601639
+              ],
+              [
+                77.177982,
+                28.598464
+              ],
+              [
+                77.18209,
+                28.597902
+              ],
+              [
+                77.189679,
+                28.594995
+              ],
+              [
+                77.189749,
+                28.59498
+              ],
+              [
+                77.193381,
+                28.59444
+              ],
+              [
+                77.19401,
+                28.59448
+              ],
+              [
+                77.202513,
+                28.593281
+              ],
+              [
+                77.206985,
+                28.59071
+              ],
+              [
+                77.210914,
+                28.587364
+              ],
+              [
+                77.21449,
+                28.586954
+              ],
+              [
+                77.216749,
+                28.588078
+              ],
+              [
+                77.223914,
+                28.591312
+              ],
+              [
+                77.225375,
+                28.592728
+              ],
+              [
+                77.228758,
+                28.598599
+              ],
+              [
+                77.22863,
+                28.60643
+              ],
+              [
+                77.230249,
+                28.608666
+              ],
+              [
+                77.230337,
+                28.6088
+              ],
+              [
+                77.233578,
+                28.615067
+              ],
+              [
+                77.233645,
+                28.615187
+              ],
+              [
+                77.233114,
+                28.617375
+              ],
+              [
+                77.232975,
+                28.617463
+              ],
+              [
+                77.22946,
+                28.619174
+              ],
+              [
+                77.227622,
+                28.620047
+              ],
+              [
+                77.220936,
+                28.62457
+              ],
+              [
+                77.219213,
+                28.626449
+              ],
+              [
+                77.219209,
+                28.626449
+              ],
+              [
+                77.211667,
+                28.622306
+              ],
+              [
+                77.210818,
+                28.621458
+              ],
+              [
+                77.210467,
+                28.620368
+              ],
+              [
+                77.210463,
+                28.620026
+              ],
+              [
+                77.210553,
+                28.617906
+              ],
+              [
+                77.204461,
+                28.612257
+              ],
+              [
+                77.199858,
+                28.611164
+              ],
+              [
+                77.199276,
+                28.611185
+              ],
+              [
+                77.19895,
+                28.611197
+              ],
+              [
+                77.198219,
+                28.611222
+              ],
+              [
+                77.193668,
+                28.618713
+              ],
+              [
+                77.199736,
+                28.623269
+              ],
+              [
+                77.199768,
+                28.6237
+              ],
+              [
+                77.196178,
+                28.623964
+              ],
+              [
+                77.191248,
+                28.621379
+              ],
+              [
+                77.190683,
+                28.6208
+              ],
+              [
+                77.190186,
+                28.620192
+              ]
+            ]
+          ],
+          "type": "Polygon"
+        }
+      }
+    ],
+    "metadata": {
+      "attribution": "openrouteservice.org | OpenStreetMap contributors",
+      "service": "isochrones",
+      "timestamp": 1787148892630,
+      "query": {
+        "profile": "driving-car",
+        "profileName": "driving-car",
+        "locations": [
+          [
+            77.209,
+            28.6139
+          ]
+        ],
+        "range": [
+          300
+        ]
+      },
+      "engine": {
+        "version": "9.9.0",
+        "build_date": "2026-06-12T10:08:58Z",
+        "graph_date": "2026-08-11T23:09:33Z",
+        "osm_date": "2026-08-03T00:00:02Z"
+      }
+    }
+  }
+}

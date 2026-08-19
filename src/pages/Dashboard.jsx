@@ -3,7 +3,6 @@ import io from 'socket.io-client';
 import { 
   resources 
 } from '../data/mockData';
-import BottomDock from '../components/BottomDock';
 import { 
   ShieldAlert, UserCheck, CheckCircle2, XCircle, Clock, 
   Layers, Truck, ArrowRight, Radio, Bell, RefreshCw, AlertTriangle
@@ -46,7 +45,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] text-slate-100 pb-32">
+    <div className="min-h-screen bg-[#0A0A0A] text-slate-100 pt-24 pb-12">
       
       {/* Persistent Demo View Top Banner */}
       <div className="bg-[#141414] border-b border-white/10 px-4 py-2.5 text-center text-xs font-mono flex items-center justify-between text-[#9A9A9A]">
@@ -276,8 +275,6 @@ export default function Dashboard() {
 
       </div>
 
-      {/* Floating Bottom Dock Nav on Dashboard */}
-      <BottomDock activeTab={activeTab} setActiveTab={setActiveTab} />
     </div>
   );
 }

@@ -4,6 +4,9 @@ import {
   Radio, MapPin, Layers, Filter, Calendar, 
   Activity, CheckCircle2, Clock, Satellite, Waves, ShieldAlert 
 } from 'lucide-react';
+import { MapContainer, TileLayer, GeoJSON } from 'react-leaflet';
+import L from 'leaflet';
+import senseData from '../../sense_data_2026-08-17.json';
 
 export default function Sense() {
   const [selectedRegion, setSelectedRegion] = useState('All Regions');
@@ -82,69 +85,39 @@ export default function Sense() {
                 <span className="text-[11px] font-mono text-emerald-400">Telemetry Active • 4 Zones Tracked</span>
               </div>
 
-              {/* Map Canvas Simulator */}
-              <div className="relative w-full h-80 sm:h-96 rounded-xl bg-[#0A0A0A] border border-white/10 overflow-hidden flex items-center justify-center p-6">
+              {/* Live Map using Leaflet */}
+              <div className="relative w-full h-80 sm:h-96 rounded-xl bg-[#0A0A0A] border border-white/10 overflow-hidden">
+                <MapContainer center={[28.6139, 77.2090]} zoom={10} className="w-full h-full z-0" zoomControl={true}>
+                  <TileLayer
+                    url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
+                  />
+                  {senseData.ors && senseData.ors.features && (
+                    <GeoJSON 
+                      data={senseData.ors} 
+                      pathOptions={{ fillColor: '#FF6B1A', color: '#FF6B1A', weight: 2, fillOpacity: 0.3 }} 
+                    />
+                  )}
+                  {senseData.earthquakes && senseData.earthquakes.features && (
+                    <GeoJSON
+                      data={senseData.earthquakes}
+                      pointToLayer={(feature, latlng) => {
+                        return L.circleMarker(latlng, {
+                          radius: feature.properties.mag * 2,
+                          fillColor: '#ef4444',
+                          color: '#b91c1c',
+                          weight: 1,
+                          opacity: 1,
+                          fillOpacity: 0.8
+                        }).bindPopup(`Magnitude: ${feature.properties.mag}<br/>Location: ${feature.properties.place}`);
+                      }}
+                    />
+                  )}
+                </MapContainer>
                 
-                {/* Background Grid Pattern */}
-                <div className="absolute inset-0 opacity-20" style={{
-                  backgroundImage: 'radial-gradient(#ffffff 1px, transparent 1px)',
-                  backgroundSize: '24px 24px'
-                }}></div>
-
-                {/* Simulated Elevation Contours */}
-                <div className="absolute inset-8 rounded-full border border-[#FF6B1A]/10 pointer-events-none"></div>
-                <div className="absolute inset-20 rounded-full border border-white/5 pointer-events-none"></div>
-
-                {/* Interactive Zone Markers Placed Roughly */}
-                {filteredZones.map((zone, idx) => {
-                  const isCrit = zone.status === 'critical';
-                  const isWarn = zone.status === 'warning';
-                  const isSelected = selectedZone.id === zone.id;
-
-                  // Coordinated offsets for Sikkim map demo
-                  const positions = [
-                    { top: '35%', left: '30%' }, // Z-4B
-                    { top: '65%', left: '45%' }, // Z-2A
-                    { top: '40%', left: '70%' }, // Z-7C
-                    { top: '20%', left: '55%' }  // Z-1D
-                  ];
-                  const pos = positions[idx % positions.length];
-
-                  return (
-                    <div 
-                      key={zone.id}
-                      onClick={() => setSelectedZone(zone)}
-                      style={{ top: pos.top, left: pos.left }}
-                      className="absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer group z-20"
-                    >
-                      <div className="relative flex items-center justify-center">
-                        <span className={`w-8 h-8 rounded-full flex items-center justify-center font-mono text-[10px] font-extrabold border shadow-lg transition-transform group-hover:scale-125 ${
-                          isSelected ? 'ring-2 ring-white scale-110' : ''
-                        } ${
-                          isCrit ? 'bg-red-950 text-red-400 border-red-500/50' :
-                          isWarn ? 'bg-amber-950 text-amber-400 border-amber-500/50' :
-                          'bg-emerald-950 text-emerald-400 border-emerald-500/50'
-                        }`}>
-                          {zone.severity}
-                        </span>
-
-                        {isCrit && (
-                          <span className="absolute -inset-1 rounded-full bg-red-500/30 animate-ping pointer-events-none"></span>
-                        )}
-                      </div>
-
-                      {/* Tooltip Tag */}
-                      <div className="mt-1 px-2.5 py-0.5 rounded bg-[#141414] border border-white/10 text-[10px] font-mono text-slate-200 whitespace-nowrap shadow-md opacity-90 group-hover:opacity-100">
-                        {zone.name.split('–')[0].trim()}
-                      </div>
-                    </div>
-                  );
-                })}
-
-                <div className="absolute bottom-3 left-4 text-[10px] font-mono text-[#9A9A9A] bg-black/60 px-3 py-1 rounded-md border border-white/5">
-                  Click a marker to inspect telemetry breakdown
+                <div className="absolute bottom-3 left-4 text-[10px] font-mono text-[#9A9A9A] bg-black/60 px-3 py-1 rounded-md border border-white/5 z-10 pointer-events-none shadow">
+                  Live data overlays (Isochrone & Seismic)
                 </div>
-
               </div>
 
               {/* Active Zone Detail Card */}

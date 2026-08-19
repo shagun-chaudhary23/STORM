@@ -1,14 +1,17 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Map, Bell, ShieldAlert, Truck, FileText, LayoutDashboard } from 'lucide-react';
 
 export default function BottomDock({ activeTab, setActiveTab }) {
+  const navigate = useNavigate();
+
   const dockItems = [
-    { id: 'overview', label: 'Overview', icon: LayoutDashboard },
-    { id: 'map', label: 'Live Map', icon: Map },
-    { id: 'alerts', label: 'Alerts', icon: Bell },
-    { id: 'zones', label: 'Zones', icon: ShieldAlert },
-    { id: 'resources', label: 'Resources', icon: Truck },
-    { id: 'reports', label: 'Reports', icon: FileText },
+    { id: 'overview', label: 'Overview', icon: LayoutDashboard, route: '/dashboard' },
+    { id: 'map', label: 'Live Map', icon: Map, route: '/sense' },
+    { id: 'alerts', label: 'Alerts', icon: Bell, route: '/reason' },
+    { id: 'zones', label: 'Zones', icon: ShieldAlert, route: '/reason' },
+    { id: 'resources', label: 'Resources', icon: Truck, route: '/resources' },
+    { id: 'reports', label: 'Reports', icon: FileText, route: '/report' },
   ];
 
   return (
@@ -21,7 +24,10 @@ export default function BottomDock({ activeTab, setActiveTab }) {
           return (
             <button
               key={item.id}
-              onClick={() => setActiveTab(item.id)}
+              onClick={() => {
+                setActiveTab(item.id);
+                navigate(item.route);
+              }}
               className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-full transition-all duration-200 cursor-pointer ${
                 isActive
                   ? 'bg-gradient-to-r from-[#FF6B1A] to-[#E8391A] text-white shadow-lg shadow-[#FF6B1A]/30 font-bold scale-[1.03]'

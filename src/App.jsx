@@ -39,8 +39,8 @@ export default function App() {
     <div className="min-h-screen bg-[#0A0A0A] text-slate-100 font-sans selection:bg-[#FF6B1A]/30 selection:text-[#FF6B1A] relative flex flex-col justify-between">
       <ScrollToTop />
 
-      {/* Sticky top nav on all pages EXCEPT Dashboard */}
-      {!isDashboard && <Navbar />}
+      {/* Sticky top nav on all pages */}
+      <Navbar />
 
       {/* Main Routed Content */}
       <main className="flex-grow">
