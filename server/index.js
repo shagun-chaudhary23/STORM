@@ -82,7 +82,10 @@ addLog('STORM Backend Server Initialized', 'system');
 async function fetchDisasterFeeds() {
   try {
     const response = await axios.get('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson');
-    const events = response.data.features || [];
+    let events = response.data.features || [];
+    
+    // Filter strictly for India
+    events = events.filter(e => e.properties.place && e.properties.place.toLowerCase().includes('india'));
 
     // Filter and map events
     const newZones = [];

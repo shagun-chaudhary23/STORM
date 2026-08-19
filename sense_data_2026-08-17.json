@@ -2,7 +2,7 @@
   "earthquakes": {
     "type": "FeatureCollection",
     "metadata": {
-      "generated": 1787148888000,
+      "generated": 1787151384000,
       "url": "https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&starttime=2026-08-03&endtime=2026-08-17&minmagnitude=2.5&minlatitude=6&maxlatitude=37&minlongitude=68&maxlongitude=97",
       "title": "USGS Earthquakes",
       "status": 200,
@@ -10,286 +10,6 @@
       "count": 17
     },
     "features": [
-      {
-        "type": "Feature",
-        "properties": {
-          "mag": 4.2,
-          "place": "23 km NE of Jurm, Afghanistan",
-          "time": 1786662717925,
-          "updated": 1786669868040,
-          "tz": null,
-          "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000tkkb",
-          "detail": "https://earthquake.usgs.gov/fdsnws/event/1/query?eventid=us6000tkkb&format=geojson",
-          "felt": null,
-          "cdi": null,
-          "mmi": null,
-          "alert": null,
-          "status": "reviewed",
-          "tsunami": 0,
-          "sig": 271,
-          "net": "us",
-          "code": "6000tkkb",
-          "ids": ",us6000tkkb,",
-          "sources": ",us,",
-          "types": ",origin,phase-data,",
-          "nst": 18,
-          "dmin": 1.752,
-          "rms": 0.39,
-          "gap": 172,
-          "magType": "mb",
-          "type": "earthquake",
-          "title": "M 4.2 - 23 km NE of Jurm, Afghanistan"
-        },
-        "geometry": {
-          "type": "Point",
-          "coordinates": [
-            71.0489,
-            36.9807,
-            110.31
-          ]
-        },
-        "id": "us6000tkkb"
-      },
-      {
-        "type": "Feature",
-        "properties": {
-          "mag": 4.3,
-          "place": "70 km NNW of Barishal, Pakistan",
-          "time": 1786595053980,
-          "updated": 1786596174040,
-          "tz": null,
-          "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000tkdf",
-          "detail": "https://earthquake.usgs.gov/fdsnws/event/1/query?eventid=us6000tkdf&format=geojson",
-          "felt": null,
-          "cdi": null,
-          "mmi": null,
-          "alert": null,
-          "status": "reviewed",
-          "tsunami": 0,
-          "sig": 284,
-          "net": "us",
-          "code": "6000tkdf",
-          "ids": ",us6000tkdf,",
-          "sources": ",us,",
-          "types": ",origin,phase-data,",
-          "nst": 38,
-          "dmin": 2.026,
-          "rms": 1.13,
-          "gap": 81,
-          "magType": "mb",
-          "type": "earthquake",
-          "title": "M 4.3 - 70 km NNW of Barishal, Pakistan"
-        },
-        "geometry": {
-          "type": "Point",
-          "coordinates": [
-            74.2629,
-            36.8572,
-            57.968
-          ]
-        },
-        "id": "us6000tkdf"
-      },
-      {
-        "type": "Feature",
-        "properties": {
-          "mag": 5.1,
-          "place": "59 km NNW of Barishal, Pakistan",
-          "time": 1786581318815,
-          "updated": 1786585987806,
-          "tz": null,
-          "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000tkci",
-          "detail": "https://earthquake.usgs.gov/fdsnws/event/1/query?eventid=us6000tkci&format=geojson",
-          "felt": 1,
-          "cdi": 2,
-          "mmi": null,
-          "alert": null,
-          "status": "reviewed",
-          "tsunami": 0,
-          "sig": 400,
-          "net": "us",
-          "code": "6000tkci",
-          "ids": ",us6000tkci,usauto6000tkci,",
-          "sources": ",us,usauto,",
-          "types": ",dyfi,internal-moment-tensor,origin,phase-data,",
-          "nst": 93,
-          "dmin": 2.131,
-          "rms": 0.91,
-          "gap": 28,
-          "magType": "mww",
-          "type": "earthquake",
-          "title": "M 5.1 - 59 km NNW of Barishal, Pakistan"
-        },
-        "geometry": {
-          "type": "Point",
-          "coordinates": [
-            74.3579,
-            36.7849,
-            58.893
-          ]
-        },
-        "id": "us6000tkci"
-      },
-      {
-        "type": "Feature",
-        "properties": {
-          "mag": 4.2,
-          "place": "53 km S of Jurm, Afghanistan",
-          "time": 1786534141367,
-          "updated": 1787128990040,
-          "tz": null,
-          "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000tk6z",
-          "detail": "https://earthquake.usgs.gov/fdsnws/event/1/query?eventid=us6000tk6z&format=geojson",
-          "felt": null,
-          "cdi": null,
-          "mmi": null,
-          "alert": null,
-          "status": "reviewed",
-          "tsunami": 0,
-          "sig": 271,
-          "net": "us",
-          "code": "6000tk6z",
-          "ids": ",us6000tk6z,",
-          "sources": ",us,",
-          "types": ",origin,phase-data,",
-          "nst": 41,
-          "dmin": 2.298,
-          "rms": 0.94,
-          "gap": 74,
-          "magType": "mb",
-          "type": "earthquake",
-          "title": "M 4.2 - 53 km S of Jurm, Afghanistan"
-        },
-        "geometry": {
-          "type": "Point",
-          "coordinates": [
-            70.9096,
-            36.3843,
-            143.607
-          ]
-        },
-        "id": "us6000tk6z"
-      },
-      {
-        "type": "Feature",
-        "properties": {
-          "mag": 4,
-          "place": "20 km S of Jurm, Afghanistan",
-          "time": 1786528552082,
-          "updated": 1787126471040,
-          "tz": null,
-          "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000tk6k",
-          "detail": "https://earthquake.usgs.gov/fdsnws/event/1/query?eventid=us6000tk6k&format=geojson",
-          "felt": null,
-          "cdi": null,
-          "mmi": null,
-          "alert": null,
-          "status": "reviewed",
-          "tsunami": 0,
-          "sig": 246,
-          "net": "us",
-          "code": "6000tk6k",
-          "ids": ",us6000tk6k,",
-          "sources": ",us,",
-          "types": ",origin,phase-data,",
-          "nst": 37,
-          "dmin": 2.068,
-          "rms": 0.71,
-          "gap": 104,
-          "magType": "mb",
-          "type": "earthquake",
-          "title": "M 4.0 - 20 km S of Jurm, Afghanistan"
-        },
-        "geometry": {
-          "type": "Point",
-          "coordinates": [
-            70.8776,
-            36.6841,
-            236.122
-          ]
-        },
-        "id": "us6000tk6k"
-      },
-      {
-        "type": "Feature",
-        "properties": {
-          "mag": 4.1,
-          "place": "30 km SSE of Jurm, Afghanistan",
-          "time": 1786494412526,
-          "updated": 1786508651040,
-          "tz": null,
-          "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000tk4d",
-          "detail": "https://earthquake.usgs.gov/fdsnws/event/1/query?eventid=us6000tk4d&format=geojson",
-          "felt": null,
-          "cdi": null,
-          "mmi": null,
-          "alert": null,
-          "status": "reviewed",
-          "tsunami": 0,
-          "sig": 259,
-          "net": "us",
-          "code": "6000tk4d",
-          "ids": ",us6000tk4d,",
-          "sources": ",us,",
-          "types": ",origin,phase-data,",
-          "nst": 35,
-          "dmin": 2.041,
-          "rms": 0.49,
-          "gap": 85,
-          "magType": "mb",
-          "type": "earthquake",
-          "title": "M 4.1 - 30 km SSE of Jurm, Afghanistan"
-        },
-        "geometry": {
-          "type": "Point",
-          "coordinates": [
-            71.0188,
-            36.6352,
-            207.202
-          ]
-        },
-        "id": "us6000tk4d"
-      },
-      {
-        "type": "Feature",
-        "properties": {
-          "mag": 4.6,
-          "place": "14 km NE of Wana, Pakistan",
-          "time": 1786484224529,
-          "updated": 1786498185040,
-          "tz": null,
-          "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000tk33",
-          "detail": "https://earthquake.usgs.gov/fdsnws/event/1/query?eventid=us6000tk33&format=geojson",
-          "felt": null,
-          "cdi": null,
-          "mmi": null,
-          "alert": null,
-          "status": "reviewed",
-          "tsunami": 0,
-          "sig": 326,
-          "net": "us",
-          "code": "6000tk33",
-          "ids": ",us6000tk33,",
-          "sources": ",us,",
-          "types": ",origin,phase-data,",
-          "nst": 39,
-          "dmin": 2.171,
-          "rms": 0.62,
-          "gap": 102,
-          "magType": "mb",
-          "type": "earthquake",
-          "title": "M 4.6 - 14 km NE of Wana, Pakistan"
-        },
-        "geometry": {
-          "type": "Point",
-          "coordinates": [
-            69.6826,
-            32.3871,
-            43.011
-          ]
-        },
-        "id": "us6000tk33"
-      },
       {
         "type": "Feature",
         "properties": {
@@ -373,46 +93,6 @@
       {
         "type": "Feature",
         "properties": {
-          "mag": 5,
-          "place": "180 km NW of Sabang, Indonesia",
-          "time": 1786244527086,
-          "updated": 1786245678040,
-          "tz": null,
-          "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000tjcl",
-          "detail": "https://earthquake.usgs.gov/fdsnws/event/1/query?eventid=us6000tjcl&format=geojson",
-          "felt": null,
-          "cdi": null,
-          "mmi": null,
-          "alert": null,
-          "status": "reviewed",
-          "tsunami": 0,
-          "sig": 385,
-          "net": "us",
-          "code": "6000tjcl",
-          "ids": ",us6000tjcl,",
-          "sources": ",us,",
-          "types": ",origin,phase-data,",
-          "nst": 53,
-          "dmin": 3.308,
-          "rms": 0.84,
-          "gap": 65,
-          "magType": "mb",
-          "type": "earthquake",
-          "title": "M 5.0 - 180 km NW of Sabang, Indonesia"
-        },
-        "geometry": {
-          "type": "Point",
-          "coordinates": [
-            94.1402,
-            7.017,
-            10
-          ]
-        },
-        "id": "us6000tjcl"
-      },
-      {
-        "type": "Feature",
-        "properties": {
           "mag": 3.8,
           "place": "30 km NW of Nashik, India",
           "time": 1786206658034,
@@ -449,126 +129,6 @@
           ]
         },
         "id": "us6000tjd3"
-      },
-      {
-        "type": "Feature",
-        "properties": {
-          "mag": 4.5,
-          "place": "2 km ESE of Mehmand Chak, Pakistan",
-          "time": 1786159804685,
-          "updated": 1786165077539,
-          "tz": null,
-          "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000tj67",
-          "detail": "https://earthquake.usgs.gov/fdsnws/event/1/query?eventid=us6000tj67&format=geojson",
-          "felt": 4,
-          "cdi": 4.2,
-          "mmi": null,
-          "alert": null,
-          "status": "reviewed",
-          "tsunami": 0,
-          "sig": 313,
-          "net": "us",
-          "code": "6000tj67",
-          "ids": ",us6000tj67,",
-          "sources": ",us,",
-          "types": ",dyfi,origin,phase-data,",
-          "nst": 36,
-          "dmin": 0.998,
-          "rms": 1.24,
-          "gap": 225,
-          "magType": "mb",
-          "type": "earthquake",
-          "title": "M 4.5 - 2 km ESE of Mehmand Chak, Pakistan"
-        },
-        "geometry": {
-          "type": "Point",
-          "coordinates": [
-            73.853,
-            32.7786,
-            10
-          ]
-        },
-        "id": "us6000tj67"
-      },
-      {
-        "type": "Feature",
-        "properties": {
-          "mag": 4.5,
-          "place": "23 km ESE of Khandūd, Afghanistan",
-          "time": 1786114533817,
-          "updated": 1786128527040,
-          "tz": null,
-          "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000tiyy",
-          "detail": "https://earthquake.usgs.gov/fdsnws/event/1/query?eventid=us6000tiyy&format=geojson",
-          "felt": null,
-          "cdi": null,
-          "mmi": null,
-          "alert": null,
-          "status": "reviewed",
-          "tsunami": 0,
-          "sig": 312,
-          "net": "us",
-          "code": "6000tiyy",
-          "ids": ",us6000tiyy,",
-          "sources": ",us,",
-          "types": ",origin,phase-data,",
-          "nst": 41,
-          "dmin": 1.451,
-          "rms": 0.99,
-          "gap": 150,
-          "magType": "mb",
-          "type": "earthquake",
-          "title": "M 4.5 - 23 km ESE of Khandūd, Afghanistan"
-        },
-        "geometry": {
-          "type": "Point",
-          "coordinates": [
-            72.5557,
-            36.8607,
-            10
-          ]
-        },
-        "id": "us6000tiyy"
-      },
-      {
-        "type": "Feature",
-        "properties": {
-          "mag": 4.2,
-          "place": "30 km ENE of Shwebo, Burma (Myanmar)",
-          "time": 1786048368799,
-          "updated": 1786050071040,
-          "tz": null,
-          "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000tiq3",
-          "detail": "https://earthquake.usgs.gov/fdsnws/event/1/query?eventid=us6000tiq3&format=geojson",
-          "felt": null,
-          "cdi": null,
-          "mmi": null,
-          "alert": null,
-          "status": "reviewed",
-          "tsunami": 0,
-          "sig": 271,
-          "net": "us",
-          "code": "6000tiq3",
-          "ids": ",us6000tiq3,",
-          "sources": ",us,",
-          "types": ",origin,phase-data,",
-          "nst": 17,
-          "dmin": 1.768,
-          "rms": 0.47,
-          "gap": 94,
-          "magType": "mb",
-          "type": "earthquake",
-          "title": "M 4.2 - 30 km ENE of Shwebo, Burma (Myanmar)"
-        },
-        "geometry": {
-          "type": "Point",
-          "coordinates": [
-            95.9588,
-            22.6929,
-            10
-          ]
-        },
-        "id": "us6000tiq3"
       },
       {
         "type": "Feature",
@@ -649,46 +209,6 @@
           ]
         },
         "id": "us6000ti9w"
-      },
-      {
-        "type": "Feature",
-        "properties": {
-          "mag": 4.8,
-          "place": "56 km WSW of Monywa, Burma (Myanmar)",
-          "time": 1785888718154,
-          "updated": 1787015293280,
-          "tz": null,
-          "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000ti5u",
-          "detail": "https://earthquake.usgs.gov/fdsnws/event/1/query?eventid=us6000ti5u&format=geojson",
-          "felt": 2,
-          "cdi": 3.4,
-          "mmi": null,
-          "alert": null,
-          "status": "reviewed",
-          "tsunami": 0,
-          "sig": 355,
-          "net": "us",
-          "code": "6000ti5u",
-          "ids": ",us6000ti5u,",
-          "sources": ",us,",
-          "types": ",dyfi,origin,phase-data,",
-          "nst": 123,
-          "dmin": 0.709,
-          "rms": 0.65,
-          "gap": 26,
-          "magType": "mb",
-          "type": "earthquake",
-          "title": "M 4.8 - 56 km WSW of Monywa, Burma (Myanmar)"
-        },
-        "geometry": {
-          "type": "Point",
-          "coordinates": [
-            94.6484,
-            21.8724,
-            107.563
-          ]
-        },
-        "id": "us6000ti5u"
       }
     ],
     "bbox": [
@@ -704,7 +224,7 @@
     "Delhi": {
       "latitude": 28.576448,
       "longitude": 77.18678,
-      "generationtime_ms": 0.24461746215820312,
+      "generationtime_ms": 0.1938343048095703,
       "utc_offset_seconds": 19800,
       "timezone": "Asia/Kolkata",
       "timezone_abbreviation": "GMT+5:30",
@@ -718,12 +238,12 @@
         "wind_speed_10m": "km/h"
       },
       "current": {
-        "time": "2026-08-19T19:30",
+        "time": "2026-08-19T20:15",
         "interval": 900,
-        "temperature_2m": 31,
+        "temperature_2m": 30.8,
         "precipitation": 0,
-        "weather_code": 1,
-        "wind_speed_10m": 2.9
+        "weather_code": 3,
+        "wind_speed_10m": 0.9
       },
       "daily_units": {
         "time": "iso8601",
@@ -757,7 +277,7 @@
     "Mumbai": {
       "latitude": 19.086115,
       "longitude": 72.85291,
-      "generationtime_ms": 0.17690658569335938,
+      "generationtime_ms": 0.17964839935302734,
       "utc_offset_seconds": 19800,
       "timezone": "Asia/Kolkata",
       "timezone_abbreviation": "GMT+5:30",
@@ -771,12 +291,12 @@
         "wind_speed_10m": "km/h"
       },
       "current": {
-        "time": "2026-08-19T19:30",
+        "time": "2026-08-19T20:15",
         "interval": 900,
-        "temperature_2m": 27.3,
-        "precipitation": 0,
-        "weather_code": 3,
-        "wind_speed_10m": 14.6
+        "temperature_2m": 27.2,
+        "precipitation": 0.1,
+        "weather_code": 51,
+        "wind_speed_10m": 14.2
       },
       "daily_units": {
         "time": "iso8601",
@@ -810,7 +330,7 @@
     "Kolkata": {
       "latitude": 22.601053,
       "longitude": 88.31776,
-      "generationtime_ms": 0.31626224517822266,
+      "generationtime_ms": 0.7568597793579102,
       "utc_offset_seconds": 19800,
       "timezone": "Asia/Kolkata",
       "timezone_abbreviation": "GMT+5:30",
@@ -824,12 +344,12 @@
         "wind_speed_10m": "km/h"
       },
       "current": {
-        "time": "2026-08-19T19:30",
+        "time": "2026-08-19T20:15",
         "interval": 900,
-        "temperature_2m": 28.8,
+        "temperature_2m": 28.4,
         "precipitation": 0,
-        "weather_code": 0,
-        "wind_speed_10m": 9.4
+        "weather_code": 2,
+        "wind_speed_10m": 8.8
       },
       "daily_units": {
         "time": "iso8601",
@@ -863,7 +383,7 @@
     "Chennai": {
       "latitude": 13.110721,
       "longitude": 80.2459,
-      "generationtime_ms": 0.1704692840576172,
+      "generationtime_ms": 0.23245811462402344,
       "utc_offset_seconds": 19800,
       "timezone": "Asia/Kolkata",
       "timezone_abbreviation": "GMT+5:30",
@@ -877,12 +397,12 @@
         "wind_speed_10m": "km/h"
       },
       "current": {
-        "time": "2026-08-19T19:30",
+        "time": "2026-08-19T20:15",
         "interval": 900,
-        "temperature_2m": 28.8,
+        "temperature_2m": 28.3,
         "precipitation": 0,
         "weather_code": 2,
-        "wind_speed_10m": 14.3
+        "wind_speed_10m": 13.5
       },
       "daily_units": {
         "time": "iso8601",
@@ -916,7 +436,7 @@
     "Bengaluru": {
       "latitude": 12.970123,
       "longitude": 77.56364,
-      "generationtime_ms": 0.16427040100097656,
+      "generationtime_ms": 0.1939535140991211,
       "utc_offset_seconds": 19800,
       "timezone": "Asia/Kolkata",
       "timezone_abbreviation": "GMT+5:30",
@@ -930,12 +450,12 @@
         "wind_speed_10m": "km/h"
       },
       "current": {
-        "time": "2026-08-19T19:30",
+        "time": "2026-08-19T20:15",
         "interval": 900,
         "temperature_2m": 22.7,
         "precipitation": 0,
         "weather_code": 3,
-        "wind_speed_10m": 10.9
+        "wind_speed_10m": 11.4
       },
       "daily_units": {
         "time": "iso8601",
@@ -969,7 +489,7 @@
     "Hyderabad": {
       "latitude": 17.398945,
       "longitude": 78.457085,
-      "generationtime_ms": 0.23174285888671875,
+      "generationtime_ms": 0.16748905181884766,
       "utc_offset_seconds": 19800,
       "timezone": "Asia/Kolkata",
       "timezone_abbreviation": "GMT+5:30",
@@ -983,12 +503,12 @@
         "wind_speed_10m": "km/h"
       },
       "current": {
-        "time": "2026-08-19T19:30",
+        "time": "2026-08-19T20:15",
         "interval": 900,
         "temperature_2m": 25.7,
-        "precipitation": 0.1,
-        "weather_code": 51,
-        "wind_speed_10m": 7.2
+        "precipitation": 0,
+        "weather_code": 3,
+        "wind_speed_10m": 8.8
       },
       "daily_units": {
         "time": "iso8601",
@@ -1022,7 +542,7 @@
     "Ahmedabad": {
       "latitude": 23.022846,
       "longitude": 72.60188,
-      "generationtime_ms": 0.17392635345458984,
+      "generationtime_ms": 0.1773834228515625,
       "utc_offset_seconds": 19800,
       "timezone": "Asia/Kolkata",
       "timezone_abbreviation": "GMT+5:30",
@@ -1036,12 +556,12 @@
         "wind_speed_10m": "km/h"
       },
       "current": {
-        "time": "2026-08-19T19:30",
+        "time": "2026-08-19T20:15",
         "interval": 900,
-        "temperature_2m": 30,
+        "temperature_2m": 29.2,
         "precipitation": 0,
         "weather_code": 2,
-        "wind_speed_10m": 8.8
+        "wind_speed_10m": 6.8
       },
       "daily_units": {
         "time": "iso8601",
@@ -1075,7 +595,7 @@
     "Pune": {
       "latitude": 18.523726,
       "longitude": 73.86876,
-      "generationtime_ms": 0.2841949462890625,
+      "generationtime_ms": 0.1773834228515625,
       "utc_offset_seconds": 19800,
       "timezone": "Asia/Kolkata",
       "timezone_abbreviation": "GMT+5:30",
@@ -1089,12 +609,12 @@
         "wind_speed_10m": "km/h"
       },
       "current": {
-        "time": "2026-08-19T19:30",
+        "time": "2026-08-19T20:15",
         "interval": 900,
-        "temperature_2m": 23.5,
+        "temperature_2m": 23.3,
         "precipitation": 0,
         "weather_code": 3,
-        "wind_speed_10m": 14.4
+        "wind_speed_10m": 14.3
       },
       "daily_units": {
         "time": "iso8601",
@@ -1396,7 +916,7 @@
     "metadata": {
       "attribution": "openrouteservice.org | OpenStreetMap contributors",
       "service": "isochrones",
-      "timestamp": 1787148892630,
+      "timestamp": 1787151388497,
       "query": {
         "profile": "driving-car",
         "profileName": "driving-car",

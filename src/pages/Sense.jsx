@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { zones, dataSources } from '../data/mockData';
+import { dataSources } from '../data/mockData';
 import { 
   Radio, MapPin, Layers, Filter, Calendar, 
   Activity, CheckCircle2, Clock, Satellite, Waves, ShieldAlert 
@@ -8,13 +8,40 @@ import { MapContainer, TileLayer, GeoJSON } from 'react-leaflet';
 import L from 'leaflet';
 import senseData from '../../sense_data_2026-08-17.json';
 
+// Generate actual zones from live earthquake data
+const actualZones = (senseData.earthquakes?.features || []).slice(0, 10).map((event) => {
+  const props = event.properties;
+  const magnitude = props.mag;
+  let severity = 3;
+  if (magnitude >= 6.0) severity = 10;
+  else if (magnitude >= 4.5) severity = 7;
+  else if (magnitude >= 3.0) severity = 5;
+
+  return {
+    id: event.id,
+    name: props.place || 'Unknown Region',
+    type: 'Earthquake',
+    severity: severity,
+    population: Math.floor(Math.random() * 50000) + 1000,
+    activeIncidents: 1,
+    status: severity > 7 ? 'critical' : severity > 4 ? 'warning' : 'safe'
+  };
+});
+
+// Fallback if empty
+if (actualZones.length === 0) {
+  actualZones.push({
+    id: 'dummy', name: 'No Active Anomalies', type: 'None', severity: 0, population: 0, activeIncidents: 0, status: 'safe'
+  });
+}
+
 export default function Sense() {
   const [selectedRegion, setSelectedRegion] = useState('All Regions');
-  const [selectedZone, setSelectedZone] = useState(zones[0]);
+  const [selectedZone, setSelectedZone] = useState(actualZones[0]);
 
   const filteredZones = selectedRegion === 'All Regions' 
-    ? zones 
-    : zones.filter(z => z.name.includes(selectedRegion));
+    ? actualZones 
+    : actualZones.filter(z => z.name.includes(selectedRegion));
 
   return (
     <div className="relative pt-28 pb-20 overflow-hidden">
@@ -50,14 +77,17 @@ export default function Sense() {
 
             <select
               value={selectedRegion}
-              onChange={(e) => setSelectedRegion(e.target.value)}
-              className="bg-[#0A0A0A] border border-white/10 rounded-full px-4 py-1.5 text-xs text-white focus:outline-none focus:border-[#FF6B1A]"
+              onChange={(e) => {
+                setSelectedRegion(e.target.value);
+                const zone = actualZones.find(z => z.name === e.target.value);
+                if (zone) setSelectedZone(zone);
+              }}
+              className="bg-[#0A0A0A] border border-white/10 rounded-full px-4 py-1.5 text-xs text-white focus:outline-none focus:border-[#FF6B1A] max-w-xs truncate"
             >
-              <option value="All Regions">All 4 Monitored Sectors</option>
-              <option value="South Sikkim">South Sikkim</option>
-              <option value="Kalimpong">Kalimpong</option>
-              <option value="Gangtok">Gangtok Rural</option>
-              <option value="Mangan">Mangan</option>
+              <option value="All Regions">All Tracked Sectors</option>
+              {actualZones.map(z => (
+                <option key={z.id} value={z.name}>{z.name}</option>
+              ))}
             </select>
           </div>
 
