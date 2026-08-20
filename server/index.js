@@ -5,10 +5,32 @@ const { Server } = require('socket.io');
 const cors = require('cors');
 const axios = require('axios');
 const { GoogleGenAI } = require('@google/genai');
+const db = require('./db');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// Officer Authentication endpoint
+app.post('/api/login', (req, res) => {
+  const { officerId, password } = req.body;
+  if (!officerId || !password) {
+    return res.status(400).json({ error: 'Officer ID and password are required.' });
+  }
+
+  const officer = db.authenticateOfficer(officerId, password);
+  if (officer) {
+    db.addLog(`Officer ${officer.name} (${officer.id}) signed in to tactical session.`, 'system', officer.id, officer.name);
+    broadcastState();
+    return res.json({ success: true, officer });
+  }
+  return res.status(401).json({ error: 'Invalid Officer ID or Password.' });
+});
+
+// List officers for demo selection
+app.get('/api/officers', (req, res) => {
+  res.json(db.getOfficers());
+});
 
 app.post('/api/analyze', async (req, res) => {
   try {
@@ -31,12 +53,12 @@ Return ONLY a valid JSON object matching exactly this structure:
   "etaAI": "Estimated time string (e.g., '15 mins')",
   "etaManual": "Estimated manual time string (e.g., '2 hrs')",
   "confidence": <integer between 80 and 99>,
-  "resourceNeeded": "${resource.name}",
+  "resourceNeeded": "${resource?.name || 'Standard Relief Unit'}",
   "keyFactors": ["factor 1", "factor 2"]
 }`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3.6-flash',
+      model: 'gemini-2.0-flash',
       contents: prompt,
       config: {
         responseMimeType: "application/json"
@@ -45,7 +67,7 @@ Return ONLY a valid JSON object matching exactly this structure:
 
     const resultJson = JSON.parse(response.text);
     resultJson.id = 'AI-' + Date.now();
-    resultJson.zone = zone.id;
+    resultJson.zone = zone?.name || zone?.id || 'Target Zone';
     
     res.json(resultJson);
   } catch (err) {
@@ -62,23 +84,19 @@ const io = new Server(server, {
   }
 });
 
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 
-// Internal state to keep track of processed recommendations
-let pendingRecommendations = [];
-let approvedRecommendations = [];
-let activeZones = [];
-let activityLog = [];
-
-function addLog(event, type) {
-  const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  activityLog.unshift({ event, time, type });
-  if (activityLog.length > 50) activityLog.pop();
+function broadcastState() {
+  io.emit('storm_state_update', {
+    zones: db.getZones(),
+    pendingRecommendations: db.getPendingRecommendations(),
+    approvedRecommendations: db.getApprovedRecommendations(),
+    activityLog: db.getActivityLog(),
+    resources: db.getResources()
+  });
 }
 
-addLog('STORM Backend Server Initialized', 'system');
-
-// Fetch Data and generate recommendations
+// Fetch Disaster Feeds and generate recommendations
 async function fetchDisasterFeeds() {
   try {
     const response = await axios.get('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson');
@@ -87,73 +105,65 @@ async function fetchDisasterFeeds() {
     // Filter strictly for India
     events = events.filter(e => e.properties.place && e.properties.place.toLowerCase().includes('india'));
 
-    // Filter and map events
-    const newZones = [];
-    const newRecs = [];
+    if (events.length > 0) {
+      const currentPending = db.getPendingRecommendations();
+      const currentApproved = db.getApprovedRecommendations();
+      const newZones = [];
+      const newRecs = [];
 
-    // Only take top 10 most recent
-    events.slice(0, 10).forEach((event, index) => {
-      const props = event.properties;
-      
-      const zoneName = `${props.place}`;
-      const magnitude = props.mag;
-      
-      let severity = 3;
-      if (magnitude >= 6.0) severity = 10;
-      else if (magnitude >= 4.5) severity = 7;
-      else if (magnitude >= 3.0) severity = 5;
+      events.slice(0, 10).forEach((event) => {
+        const props = event.properties;
+        const zoneName = `${props.place}`;
+        const magnitude = props.mag;
+        
+        let severity = 3;
+        if (magnitude >= 6.0) severity = 10;
+        else if (magnitude >= 4.5) severity = 7;
+        else if (magnitude >= 3.0) severity = 5;
 
-      newZones.push({
-        id: event.id,
-        name: zoneName,
-        type: 'Earthquake',
-        severity: severity,
-        population: Math.floor(Math.random() * 500000), // Estimated affected
-        activeIncidents: 1,
-        status: severity > 7 ? 'critical' : 'warning'
+        newZones.push({
+          id: event.id,
+          name: zoneName,
+          type: 'Earthquake',
+          severity: severity,
+          population: Math.floor(Math.random() * 500000) + 10000,
+          activeIncidents: 1,
+          status: severity > 7 ? 'critical' : 'warning',
+          coordinates: event.geometry?.coordinates ? [event.geometry.coordinates[1], event.geometry.coordinates[0]] : null
+        });
+
+        const recId = `REC-${event.id}`;
+        const isAlreadyPending = currentPending.some(r => r.id === recId);
+        const isAlreadyApproved = currentApproved.some(r => r.id === recId);
+
+        if (severity >= 7 && !isAlreadyPending && !isAlreadyApproved) {
+          newRecs.push({
+            id: recId,
+            zone: zoneName,
+            action: `Magnitude ${magnitude} EQ Response & Evacuation`,
+            confidence: Math.floor(85 + Math.random() * 15),
+            etaAI: '10 mins',
+            etaManual: '3 hrs',
+            resourceNeeded: 'NDRF Battalion, Search & Rescue',
+            status: 'pending'
+          });
+          db.addLog(`AI detected critical anomaly in ${zoneName}. Recommendation generated.`, 'alert', 'SYSTEM', 'STORM AI');
+        }
       });
 
-      // Generate a recommendation if it's severe and we haven't processed it yet
-      const recId = `REC-${event.id}`;
-      const isAlreadyPending = pendingRecommendations.some(r => r.id === recId);
-      const isAlreadyApproved = approvedRecommendations.some(r => r.id === recId);
-
-      if (severity >= 7 && !isAlreadyPending && !isAlreadyApproved) {
-        newRecs.push({
-          id: recId,
-          zone: zoneName,
-          action: `Magnitude ${magnitude} EQ Response & Evacuation`,
-          confidence: Math.floor(85 + Math.random() * 15), // 85-99%
-          etaAI: '10 mins',
-          etaManual: '3 hrs',
-          resourceNeeded: 'NDRF Battalion, Search & Rescue',
-          status: 'pending'
-        });
-        addLog(`AI detected critical anomaly in ${zoneName}. Recommendation generated.`, 'alert');
+      if (newZones.length > 0) {
+        db.saveZones(newZones);
       }
-    });
 
-    activeZones = newZones;
-    
-    if (newRecs.length > 0) {
-       pendingRecommendations = [...newRecs, ...pendingRecommendations];
+      if (newRecs.length > 0) {
+        db.addRecommendations(newRecs);
+      }
+
+      broadcastState();
     }
-
-    // Broadcast state to all clients
-    broadcastState();
-
   } catch (error) {
-    console.error('Error fetching GDACS feed:', error.message);
+    console.error('Error fetching disaster feeds:', error.message);
   }
-}
-
-function broadcastState() {
-  io.emit('storm_state_update', {
-    zones: activeZones,
-    pendingRecommendations: pendingRecommendations,
-    approvedRecommendations: approvedRecommendations,
-    activityLog: activityLog
-  });
 }
 
 io.on('connection', (socket) => {
@@ -161,28 +171,44 @@ io.on('connection', (socket) => {
   
   // Send initial state upon connection
   socket.emit('storm_state_update', {
-    zones: activeZones,
-    pendingRecommendations,
-    approvedRecommendations,
-    activityLog
+    zones: db.getZones(),
+    pendingRecommendations: db.getPendingRecommendations(),
+    approvedRecommendations: db.getApprovedRecommendations(),
+    activityLog: db.getActivityLog(),
+    resources: db.getResources()
   });
 
   socket.on('approve_recommendation', (rec) => {
-    // Move from pending to approved
-    pendingRecommendations = pendingRecommendations.filter(r => r.id !== rec.id);
-    const approvedRec = { ...rec, status: 'approved', approvedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
-    approvedRecommendations = [approvedRec, ...approvedRecommendations];
+    const officerInfo = (rec.officerId || rec.officerName)
+      ? { id: rec.officerId, name: rec.officerName, rank: rec.rank }
+      : null;
+
+    db.approveRecommendation(rec, officerInfo);
     
-    addLog(`Officer approved dispatch for ${rec.zone}.`, 'approval');
+    const officerLabel = officerInfo?.name 
+      ? `Officer ${officerInfo.name} (${officerInfo.id || 'Command'})` 
+      : 'Officer';
     
-    // Broadcast updated state
+    db.addLog(`${officerLabel} approved dispatch for ${rec.zone || 'designated sector'}.`, 'approval', officerInfo?.id, officerInfo?.name);
+    
     broadcastState();
   });
 
   socket.on('reject_recommendation', (recId) => {
-    pendingRecommendations = pendingRecommendations.filter(r => r.id !== recId);
-    addLog(`Officer rejected AI recommendation (ID: ${recId}).`, 'system');
+    const id = typeof recId === 'object' ? (recId.id || recId.recommendationId) : recId;
+    db.rejectRecommendation(id);
+    db.addLog(`Officer rejected AI recommendation (ID: ${id}).`, 'system');
     broadcastState();
+  });
+
+  socket.on('bind_resource', (payload) => {
+    const { resourceId, targetZoneId, targetZoneName, officerId, officerName } = payload;
+    const updated = db.bindResource(resourceId, targetZoneId, targetZoneName);
+    if (updated) {
+      const officerLabel = officerName ? ` by ${officerName}` : '';
+      db.addLog(`Resource ${updated.name} deployed to ${updated.assignedZone}${officerLabel}.`, 'system', officerId, officerName);
+      broadcastState();
+    }
   });
 
   socket.on('disconnect', () => {
@@ -190,7 +216,7 @@ io.on('connection', (socket) => {
   });
 });
 
-// Start fetching every 30 seconds
+// Refresh feed periodically
 setInterval(fetchDisasterFeeds, 30000);
 fetchDisasterFeeds(); // Initial fetch
 

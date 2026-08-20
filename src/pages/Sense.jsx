@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import io from 'socket.io-client';
 import { dataSources } from '../data/mockData';
 import { 
   Radio, MapPin, Layers, Filter, Calendar, 
@@ -8,8 +9,19 @@ import { MapContainer, TileLayer, GeoJSON } from 'react-leaflet';
 import L from 'leaflet';
 import senseData from '../../sense_data_2026-08-17.json';
 
-// Generate actual zones from live earthquake data
-const actualZones = (senseData.earthquakes?.features || []).slice(0, 10).map((event) => {
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
+const socket = io(API_URL, {
+  reconnection: true,
+  reconnectionAttempts: 5,
+  reconnectionDelay: 1000,
+  reconnectionDelayMax: 5000,
+  randomizationFactor: 0.5,
+  timeout: 5000
+});
+
+// Generate initial/fallback zones from static senseData
+const staticZones = (senseData.earthquakes?.features || []).slice(0, 10).map((event) => {
   const props = event.properties;
   const magnitude = props.mag;
   let severity = 3;
@@ -28,20 +40,61 @@ const actualZones = (senseData.earthquakes?.features || []).slice(0, 10).map((ev
   };
 });
 
-// Fallback if empty
-if (actualZones.length === 0) {
-  actualZones.push({
+if (staticZones.length === 0) {
+  staticZones.push({
     id: 'dummy', name: 'No Active Anomalies', type: 'None', severity: 0, population: 0, activeIncidents: 0, status: 'safe'
   });
 }
 
 export default function Sense() {
+  const [zones, setZones] = useState(staticZones);
   const [selectedRegion, setSelectedRegion] = useState('All Regions');
-  const [selectedZone, setSelectedZone] = useState(actualZones[0]);
+  const [selectedZone, setSelectedZone] = useState(staticZones[0]);
+  const [earthquakeGeoJSON, setEarthquakeGeoJSON] = useState(senseData.earthquakes || null);
+
+  useEffect(() => {
+    const handleStateUpdate = (data) => {
+      if (data && data.zones && data.zones.length > 0) {
+        setZones(data.zones);
+        if (data.earthquakeGeoJSON) {
+          setEarthquakeGeoJSON(data.earthquakeGeoJSON);
+        } else {
+          // Convert zones into GeoJSON features for the map
+          const features = data.zones.map((z, idx) => ({
+            type: 'Feature',
+            id: z.id || `zone-${idx}`,
+            properties: {
+              mag: z.severity ? (z.severity > 5 ? z.severity / 1.5 : z.severity) : 4.0,
+              place: z.name
+            },
+            geometry: {
+              type: 'Point',
+              coordinates: z.coordinates 
+                ? (Array.isArray(z.coordinates) ? [z.coordinates[1], z.coordinates[0]] : [77.2090, 28.6139]) 
+                : [77.2090 + (idx * 0.4 - 1.0), 28.6139 + (idx * 0.3 - 0.8)]
+            }
+          }));
+          setEarthquakeGeoJSON({ type: 'FeatureCollection', features });
+        }
+      }
+    };
+
+    socket.on('storm_state_update', handleStateUpdate);
+
+    return () => {
+      socket.off('storm_state_update', handleStateUpdate);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (zones.length > 0 && (!selectedZone || !zones.some(z => z.id === selectedZone.id))) {
+      setSelectedZone(zones[0]);
+    }
+  }, [zones]);
 
   const filteredZones = selectedRegion === 'All Regions' 
-    ? actualZones 
-    : actualZones.filter(z => z.name.includes(selectedRegion));
+    ? zones 
+    : zones.filter(z => z.name.includes(selectedRegion));
 
   return (
     <div className="relative pt-28 pb-20 overflow-hidden">
@@ -79,13 +132,13 @@ export default function Sense() {
               value={selectedRegion}
               onChange={(e) => {
                 setSelectedRegion(e.target.value);
-                const zone = actualZones.find(z => z.name === e.target.value);
+                const zone = zones.find(z => z.name === e.target.value);
                 if (zone) setSelectedZone(zone);
               }}
               className="bg-[#0A0A0A] border border-white/10 rounded-full px-4 py-1.5 text-xs text-white focus:outline-none focus:border-[#FF6B1A] max-w-xs truncate"
             >
               <option value="All Regions">All Tracked Sectors</option>
-              {actualZones.map(z => (
+              {zones.map(z => (
                 <option key={z.id} value={z.name}>{z.name}</option>
               ))}
             </select>
@@ -112,7 +165,7 @@ export default function Sense() {
                   <Activity className="w-4 h-4 text-[#FF6B1A]" />
                   <h2 className="text-base font-bold text-white">Spatial Inundation & Hazard Zones</h2>
                 </div>
-                <span className="text-[11px] font-mono text-emerald-400">Telemetry Active • 4 Zones Tracked</span>
+                <span className="text-[11px] font-mono text-emerald-400">Telemetry Active • {zones.length} Zones Tracked</span>
               </div>
 
               {/* Live Map using Leaflet */}
@@ -128,18 +181,19 @@ export default function Sense() {
                       pathOptions={{ fillColor: '#FF6B1A', color: '#FF6B1A', weight: 2, fillOpacity: 0.3 }} 
                     />
                   )}
-                  {senseData.earthquakes && senseData.earthquakes.features && (
+                  {earthquakeGeoJSON && earthquakeGeoJSON.features && (
                     <GeoJSON
-                      data={senseData.earthquakes}
+                      key={`eq-${earthquakeGeoJSON.features.length}-${earthquakeGeoJSON.features[0]?.id || '0'}`}
+                      data={earthquakeGeoJSON}
                       pointToLayer={(feature, latlng) => {
                         return L.circleMarker(latlng, {
-                          radius: feature.properties.mag * 2,
+                          radius: (feature.properties?.mag || 3) * 2,
                           fillColor: '#ef4444',
                           color: '#b91c1c',
                           weight: 1,
                           opacity: 1,
                           fillOpacity: 0.8
-                        }).bindPopup(`Magnitude: ${feature.properties.mag}<br/>Location: ${feature.properties.place}`);
+                        }).bindPopup(`Magnitude: ${feature.properties?.mag || 'N/A'}<br/>Location: ${feature.properties?.place || 'Incident Zone'}`);
                       }}
                     />
                   )}

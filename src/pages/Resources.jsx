@@ -1,17 +1,49 @@
-import React, { useState } from 'react';
-import { resources as initialResources, zones } from '../data/mockData';
+import React, { useState, useEffect } from 'react';
+import io from 'socket.io-client';
+import { resources as initialResources, zones as initialZones } from '../data/mockData';
 import { 
   Truck, ShieldAlert, HeartPulse, LifeBuoy, Package, 
   MapPin, CheckCircle2, AlertCircle, RefreshCw, Filter, Navigation
 } from 'lucide-react';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
+const socket = io(API_URL, {
+  reconnection: true,
+  reconnectionAttempts: 5,
+  reconnectionDelay: 1000,
+  reconnectionDelayMax: 5000,
+  randomizationFactor: 0.5,
+  timeout: 5000
+});
+
 export default function Resources() {
   const [resources, setResources] = useState(initialResources);
+  const [liveZones, setLiveZones] = useState(initialZones);
   const [filterType, setFilterType] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [selectedResource, setSelectedResource] = useState(null);
   const [assignmentModalOpen, setAssignmentModalOpen] = useState(false);
   const [selectedZone, setSelectedZone] = useState('');
+
+  useEffect(() => {
+    const handleStateUpdate = (data) => {
+      if (data) {
+        if (data.resources && data.resources.length > 0) {
+          setResources(data.resources);
+        }
+        if (data.zones && data.zones.length > 0) {
+          setLiveZones(data.zones);
+        }
+      }
+    };
+
+    socket.on('storm_state_update', handleStateUpdate);
+
+    return () => {
+      socket.off('storm_state_update', handleStateUpdate);
+    };
+  }, []);
 
   const totalResources = resources.length;
   const availableCount = resources.filter(r => r.status === 'available').length;
@@ -34,7 +66,7 @@ export default function Resources() {
 
   const handleAssignClick = (resource) => {
     setSelectedResource(resource);
-    setSelectedZone(zones[0]?.id || '');
+    setSelectedZone(liveZones[0]?.id || '');
     setAssignmentModalOpen(true);
   };
 
@@ -42,10 +74,27 @@ export default function Resources() {
     e.preventDefault();
     if (!selectedResource || !selectedZone) return;
 
-    const zoneName = zones.find(z => z.id === selectedZone)?.name || 'Unknown Zone';
+    const zoneObj = liveZones.find(z => z.id === selectedZone);
+    const zoneName = zoneObj?.name || 'Unknown Zone';
     
+    let officer = null;
+    try {
+      const saved = localStorage.getItem('storm_officer');
+      if (saved) officer = JSON.parse(saved);
+    } catch {}
+
+    const payload = {
+      resourceId: selectedResource.id || selectedResource.name,
+      targetZoneId: selectedZone,
+      targetZoneName: zoneName,
+      officerId: officer?.id || 'SDMA-CMD',
+      officerName: officer?.name || 'Relief Coordinator'
+    };
+
+    socket.emit('bind_resource', payload);
+
     setResources(resources.map(r => 
-      r.id === selectedResource.id 
+      (r.id === selectedResource.id || r.name === selectedResource.name)
         ? { ...r, status: 'deployed', assignedZone: zoneName }
         : r
     ));
@@ -200,10 +249,10 @@ export default function Resources() {
                     {isAvailable && (
                       <button 
                         onClick={() => handleAssignClick(item)}
-                        className="mt-5 w-full py-2.5 rounded-xl bg-white/5 hover:bg-emerald-500/20 border border-white/10 hover:border-emerald-500/40 text-xs font-bold text-emerald-400 transition-all flex items-center justify-center gap-2"
+                        className="mt-5 w-full py-2.5 rounded-xl bg-white/5 hover:bg-emerald-500/20 border border-white/10 hover:border-emerald-500/40 text-xs font-bold text-emerald-400 transition-all flex items-center justify-center gap-2 cursor-pointer"
                       >
                         <Navigation className="w-4 h-4" />
-                        Assign to Incident
+                        BIND & Deploy Asset
                       </button>
                     )}
                   </div>
@@ -227,7 +276,7 @@ export default function Resources() {
               </div>
 
               <div className="space-y-4">
-                {zones.map(zone => (
+                {liveZones.map(zone => (
                   <div key={zone.id} className="p-4 rounded-xl bg-black/40 border border-white/5 hover:border-red-500/30 transition-colors">
                     <div className="flex justify-between items-start mb-2">
                       <h3 className="text-sm font-bold text-white">{zone.name}</h3>
@@ -236,8 +285,8 @@ export default function Resources() {
                       </span>
                     </div>
                     <div className="text-[10px] text-[#9A9A9A] font-mono flex justify-between">
-                      <span>Pop: {zone.population.toLocaleString()}</span>
-                      <span>Incidents: {zone.activeIncidents}</span>
+                      <span>Pop: {zone.population?.toLocaleString() || 'N/A'}</span>
+                      <span>Incidents: {zone.activeIncidents || 1}</span>
                     </div>
                   </div>
                 ))}
@@ -270,7 +319,7 @@ export default function Resources() {
                   onChange={(e) => setSelectedZone(e.target.value)}
                   className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl p-3.5 text-xs text-white focus:outline-none focus:border-emerald-500"
                 >
-                  {zones.map(z => (
+                  {liveZones.map(z => (
                     <option key={z.id} value={z.id}>{z.name} (Severity: {z.severity})</option>
                   ))}
                 </select>
@@ -279,22 +328,23 @@ export default function Resources() {
               <div className="p-4 rounded-xl bg-white/5 border border-white/10 text-xs font-mono text-[#9A9A9A]">
                 Current Location: <span className="text-slate-200">{selectedResource.location}</span>
                 <br/>
-                Estimated Time: <span className="text-emerald-400">Computing route...</span>
+                Estimated Time: <span className="text-emerald-400">Computing route via State Highway...</span>
               </div>
 
               <div className="flex gap-3 pt-2">
                 <button
                   type="button"
                   onClick={() => setAssignmentModalOpen(false)}
-                  className="flex-1 py-3 text-xs font-bold text-slate-300 bg-white/5 hover:bg-white/10 rounded-xl transition-all"
+                  className="flex-1 py-3 text-xs font-bold text-slate-300 bg-white/5 hover:bg-white/10 rounded-xl transition-all cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-3 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl shadow-lg transition-all"
+                  className="flex-1 py-3 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl shadow-lg transition-all cursor-pointer flex items-center justify-center gap-1.5"
                 >
-                  Confirm Deployment
+                  <Navigation className="w-4 h-4" />
+                  Confirm & BIND
                 </button>
               </div>
             </form>

@@ -1,19 +1,50 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import io from 'socket.io-client';
 import { zones, recommendations, resources } from '../data/mockData';
 import { 
   Cpu, ArrowRight, UserCheck, ShieldCheck, Clock, 
-  Sparkles, AlertCircle, CheckCircle2, Sliders, ChevronRight, Fingerprint, Activity, Loader2
+  Sparkles, AlertCircle, CheckCircle2, Sliders, ChevronRight, Fingerprint, Activity, Loader2, KeyRound, LogOut
 } from 'lucide-react';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
+const socket = io(API_URL, {
+  reconnection: true,
+  reconnectionAttempts: 5,
+  reconnectionDelay: 1000,
+  reconnectionDelayMax: 5000,
+  randomizationFactor: 0.5,
+  timeout: 5000
+});
+
+const DEFAULT_OFFICERS = [
+  { id: "OFF-101", name: "Col. Rajesh Sharma", rank: "SDMA Relief Commissioner", defaultPass: "officer101" },
+  { id: "OFF-102", name: "Dr. Ananya Sen", rank: "NDMA Operations Chief", defaultPass: "officer102" },
+  { id: "OFF-103", name: "Capt. Vikram Malhotra", rank: "NDRF Sector Commander", defaultPass: "officer103" }
+];
 
 export default function Reason() {
   const [selectedZoneId, setSelectedZoneId] = useState(zones[0].id);
   const [selectedResourceName, setSelectedResourceName] = useState(resources[0].name);
   const [analyzed, setAnalyzed] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const [isApproved, setIsApproved] = useState(false);
-  const [approvalPin, setApprovalPin] = useState('');
   const [liveRecommendation, setLiveRecommendation] = useState(null);
+
+  // Officer authentication state
+  const [activeOfficer, setActiveOfficer] = useState(() => {
+    try {
+      const saved = localStorage.getItem('storm_officer');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [officerIdInput, setOfficerIdInput] = useState(DEFAULT_OFFICERS[0].id);
+  const [passwordInput, setPasswordInput] = useState(DEFAULT_OFFICERS[0].defaultPass);
+  const [authError, setAuthError] = useState('');
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
 
   // Match recommendation for selected zone or fallback to first
   const currentRec = liveRecommendation || (recommendations.find(r => r.zone === selectedZoneId) || recommendations[0]);
@@ -28,7 +59,7 @@ export default function Reason() {
     setLiveRecommendation(null);
     
     try {
-      const response = await fetch('http://localhost:3001/api/analyze', {
+      const response = await fetch(`${API_URL}/api/analyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -41,7 +72,7 @@ export default function Reason() {
       if (response.ok) {
         setLiveRecommendation(data);
       } else {
-        alert("AI Analysis Failed: " + data.error);
+        alert("AI Analysis Failed: " + (data.error || "Unknown error"));
       }
     } catch (err) {
       alert("Network Error: " + err.message);
@@ -51,15 +82,103 @@ export default function Reason() {
     }
   };
 
-  const handleApprove = (e) => {
+  const handleOfficerLoginAndApprove = async (e) => {
     e.preventDefault();
-    if (approvalPin === '1234') { // Dummy PIN for simulation
-      setIsApproved(true);
-      setShowApprovalModal(false);
-      setApprovalPin('');
-    } else {
-      alert("Invalid PIN. Please try again.");
+    setAuthError('');
+    setIsAuthenticating(true);
+
+    try {
+      // Authenticate against server
+      let officer = null;
+      try {
+        const response = await fetch(`${API_URL}/api/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            officerId: officerIdInput,
+            password: passwordInput
+          })
+        });
+        const data = await response.json();
+        if (response.ok && data.officer) {
+          officer = data.officer;
+        } else {
+          setAuthError(data.error || 'Invalid credentials');
+          setIsAuthenticating(false);
+          return;
+        }
+      } catch {
+        // Local fallback check if backend unreachable
+        const found = DEFAULT_OFFICERS.find(o => o.id === officerIdInput && o.defaultPass === passwordInput);
+        if (found) {
+          officer = { id: found.id, name: found.name, rank: found.rank };
+        } else {
+          setAuthError('Invalid credentials');
+          setIsAuthenticating(false);
+          return;
+        }
+      }
+
+      if (officer) {
+        setActiveOfficer(officer);
+        localStorage.setItem('storm_officer', JSON.stringify(officer));
+
+        // Emit approve_recommendation socket event
+        const recPayload = {
+          id: currentRec.id || `REC-AI-${Date.now()}`,
+          recommendationId: currentRec.id || `REC-AI-${Date.now()}`,
+          zone: currentZone.name,
+          action: currentRec.action,
+          resourceNeeded: selectedResource.name,
+          etaAI: currentRec.etaAI || '15 mins',
+          etaManual: currentRec.etaManual || '3 hrs',
+          confidence: currentRec.confidence || 90,
+          officerId: officer.id,
+          officerName: officer.name,
+          rank: officer.rank,
+          timestamp: new Date().toISOString()
+        };
+
+        socket.emit('approve_recommendation', recPayload);
+
+        setIsApproved(true);
+        setShowAuthModal(false);
+      }
+    } catch (err) {
+      setAuthError('Authentication error: ' + err.message);
+    } finally {
+      setIsAuthenticating(false);
     }
+  };
+
+  const handleQuickApprove = () => {
+    if (!activeOfficer) {
+      setShowAuthModal(true);
+      return;
+    }
+
+    const recPayload = {
+      id: currentRec.id || `REC-AI-${Date.now()}`,
+      recommendationId: currentRec.id || `REC-AI-${Date.now()}`,
+      zone: currentZone.name,
+      action: currentRec.action,
+      resourceNeeded: selectedResource.name,
+      etaAI: currentRec.etaAI || '15 mins',
+      etaManual: currentRec.etaManual || '3 hrs',
+      confidence: currentRec.confidence || 90,
+      officerId: activeOfficer.id,
+      officerName: activeOfficer.name,
+      rank: activeOfficer.rank,
+      timestamp: new Date().toISOString()
+    };
+
+    socket.emit('approve_recommendation', recPayload);
+    setIsApproved(true);
+  };
+
+  const handleOfficerLogout = () => {
+    setActiveOfficer(null);
+    localStorage.removeItem('storm_officer');
   };
 
   return (
@@ -84,6 +203,31 @@ export default function Reason() {
           <p className="text-sm sm:text-base text-[#9A9A9A] leading-relaxed">
             Multi-constraint spatial planning models rank route safety, stockpile distances, and resource availability to draft instant recommendations for coordinator authorization.
           </p>
+
+          {/* Active Officer Identity Banner */}
+          <div className="pt-2">
+            {activeOfficer ? (
+              <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full bg-emerald-950/40 border border-emerald-500/30 text-xs font-mono">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span className="text-slate-300">Active Officer:</span>
+                <strong className="text-emerald-400">{activeOfficer.name} ({activeOfficer.id})</strong>
+                <span className="text-slate-500">|</span>
+                <span className="text-slate-400">{activeOfficer.rank}</span>
+                <button
+                  onClick={handleOfficerLogout}
+                  className="text-slate-400 hover:text-red-400 transition-colors ml-1 p-0.5"
+                  title="Sign out officer"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : (
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-950/40 border border-amber-500/30 text-xs font-mono text-amber-400">
+                <KeyRound className="w-3.5 h-3.5" />
+                <span>No Officer Session • Authentication Required for Dispatch</span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Top: Two-Input Comparison Form */}
@@ -298,7 +442,7 @@ export default function Reason() {
                   </h4>
                   <p className="text-xs text-[#9A9A9A]">
                     {isApproved 
-                      ? `Coordinator signature verified. ${selectedResource.name} has been instructed to deploy to ${currentZone.name}.` 
+                      ? `Coordinator signature verified by ${activeOfficer ? `${activeOfficer.name} (${activeOfficer.rank})` : 'Authorized Officer'}. ${selectedResource.name} has been instructed to deploy to ${currentZone.name}.` 
                       : 'STORM provides situational decision support. Official dispatch orders only execute upon authentication by a designated State or District Coordinator.'}
                   </p>
                 </div>
@@ -306,11 +450,17 @@ export default function Reason() {
 
               {!isApproved ? (
                 <button
-                  onClick={() => setShowApprovalModal(true)}
-                  className="px-6 py-2.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-xs font-mono font-bold text-white whitespace-nowrap transition-all shadow-lg flex items-center gap-2"
+                  onClick={() => {
+                    if (activeOfficer) {
+                      handleQuickApprove();
+                    } else {
+                      setShowAuthModal(true);
+                    }
+                  }}
+                  className="px-6 py-2.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-xs font-mono font-bold text-white whitespace-nowrap transition-all shadow-lg flex items-center gap-2 cursor-pointer"
                 >
                   <Fingerprint className="w-4 h-4 text-[#FF6B1A]" />
-                  Authorize Dispatch
+                  {activeOfficer ? `Authorize as ${activeOfficer.name}` : 'Authenticate & Authorize'}
                 </button>
               ) : (
                 <span className="px-4 py-2 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-500/30 text-xs font-mono font-bold flex items-center gap-2">
@@ -325,50 +475,104 @@ export default function Reason() {
 
       </div>
 
-      {/* Approval Modal */}
-      {showApprovalModal && (
+      {/* Officer Authentication Modal */}
+      {showAuthModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-[#141414] border border-white/10 rounded-2xl w-full max-w-md p-6 sm:p-8 space-y-6 shadow-2xl relative">
             <div className="text-center space-y-2">
               <div className="w-12 h-12 rounded-full bg-[#FF6B1A]/10 border border-[#FF6B1A]/30 text-[#FF6B1A] flex items-center justify-center mx-auto mb-4">
-                <ShieldCheck className="w-6 h-6" />
+                <KeyRound className="w-6 h-6" />
               </div>
-              <h2 className="text-xl font-bold text-white">Coordinator Authorization</h2>
+              <h2 className="text-xl font-bold text-white">Officer Authentication</h2>
               <p className="text-xs text-[#9A9A9A]">
-                Confirm dispatch of <strong className="text-slate-200">{selectedResource.name}</strong> to <strong className="text-slate-200">{currentZone.name}</strong>.
+                Sign in with duty credentials to authorize dispatch to <strong className="text-slate-200">{currentZone.name}</strong>.
               </p>
             </div>
 
-            <form onSubmit={handleApprove} className="space-y-4">
-              <div className="space-y-2">
-                <label className="block text-xs font-mono text-slate-400 text-center">
-                  Enter 4-Digit Security PIN (Try '1234')
-                </label>
-                <input
-                  type="password"
-                  maxLength={4}
-                  required
-                  autoFocus
-                  value={approvalPin}
-                  onChange={(e) => setApprovalPin(e.target.value)}
-                  className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl p-4 text-center text-2xl tracking-[1em] text-white focus:outline-none focus:border-[#FF6B1A]"
-                />
+            {/* Quick Demo Officer Selector */}
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-mono text-slate-400 block">Select Duty Officer (Demo Presets):</label>
+              <div className="grid grid-cols-1 gap-1.5">
+                {DEFAULT_OFFICERS.map(o => (
+                  <button
+                    key={o.id}
+                    type="button"
+                    onClick={() => {
+                      setOfficerIdInput(o.id);
+                      setPasswordInput(o.defaultPass);
+                    }}
+                    className={`p-2.5 rounded-xl border text-left text-xs transition-all ${
+                      officerIdInput === o.id 
+                        ? 'bg-[#FF6B1A]/10 border-[#FF6B1A] text-white' 
+                        : 'bg-black/30 border-white/5 text-slate-400 hover:border-white/20'
+                    }`}
+                  >
+                    <div className="font-bold text-white">{o.name} <span className="font-mono text-[10px] text-[#FF6B1A]">({o.id})</span></div>
+                    <div className="text-[10px] text-slate-500">{o.rank}</div>
+                  </button>
+                ))}
               </div>
+            </div>
+
+            <form onSubmit={handleOfficerLoginAndApprove} className="space-y-4">
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-mono text-slate-400 mb-1">
+                    Officer ID
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={officerIdInput}
+                    onChange={(e) => setOfficerIdInput(e.target.value)}
+                    className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl p-3 text-xs font-mono text-white focus:outline-none focus:border-[#FF6B1A]"
+                    placeholder="e.g. OFF-101"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-mono text-slate-400 mb-1">
+                    Security Passcode
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={passwordInput}
+                    onChange={(e) => setPasswordInput(e.target.value)}
+                    className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl p-3 text-xs font-mono text-white focus:outline-none focus:border-[#FF6B1A]"
+                    placeholder="Enter passcode"
+                  />
+                </div>
+              </div>
+
+              {authError && (
+                <div className="p-2.5 rounded-lg bg-red-950/60 border border-red-500/40 text-red-400 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <span>{authError}</span>
+                </div>
+              )}
 
               <div className="flex gap-3 pt-2">
                 <button
                   type="button"
-                  onClick={() => setShowApprovalModal(false)}
-                  className="flex-1 py-3 text-xs font-bold text-slate-300 bg-white/5 hover:bg-white/10 rounded-xl transition-all"
+                  onClick={() => setShowAuthModal(false)}
+                  className="flex-1 py-3 text-xs font-bold text-slate-300 bg-white/5 hover:bg-white/10 rounded-xl transition-all cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-3 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl shadow-lg shadow-emerald-900/50 transition-all flex items-center justify-center gap-2"
+                  disabled={isAuthenticating}
+                  className="flex-1 py-3 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl shadow-lg shadow-emerald-900/50 transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  <Fingerprint className="w-4 h-4" />
-                  Sign & Execute
+                  {isAuthenticating ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <>
+                      <Fingerprint className="w-4 h-4" />
+                      Sign & Execute
+                    </>
+                  )}
                 </button>
               </div>
             </form>

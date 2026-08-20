@@ -1,14 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import io from 'socket.io-client';
 import { 
-  resources 
+  resources as initialResources 
 } from '../data/mockData';
 import { 
   ShieldAlert, UserCheck, CheckCircle2, XCircle, Clock, 
-  Layers, Truck, ArrowRight, Radio, Bell, RefreshCw, AlertTriangle
+  Layers, Truck, ArrowRight, Radio, Bell, RefreshCw, AlertTriangle, Download, Sparkles
 } from 'lucide-react';
 
-const socket = io('http://localhost:3001');
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
+const socket = io(API_URL, {
+  reconnection: true,
+  reconnectionAttempts: 5,
+  reconnectionDelay: 1000,
+  reconnectionDelayMax: 5000,
+  randomizationFactor: 0.5,
+  timeout: 5000
+});
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('overview');
@@ -16,27 +25,76 @@ export default function Dashboard() {
   const [pendingRecs, setPendingRecs] = useState([]);
   const [approvedRecs, setApprovedRecs] = useState([]);
   const [liveActivityLog, setLiveActivityLog] = useState([]);
+  const [liveResources, setLiveResources] = useState(initialResources);
+  const [isDisconnected, setIsDisconnected] = useState(!socket.connected);
 
   useEffect(() => {
+    const handleConnect = () => {
+      setIsDisconnected(false);
+    };
+
+    const handleDisconnect = (reason) => {
+      console.warn('Socket disconnected:', reason);
+      setIsDisconnected(true);
+    };
+
+    const handleConnectError = (error) => {
+      console.error('Socket connect_error:', error.message);
+      setIsDisconnected(true);
+    };
+
+    const handleReconnect = () => {
+      setIsDisconnected(false);
+    };
+
+    socket.on('connect', handleConnect);
+    socket.on('disconnect', handleDisconnect);
+    socket.on('connect_error', handleConnectError);
+    socket.on('reconnect', handleReconnect);
+
     socket.on('storm_state_update', (data) => {
-      setActiveZones(data.zones || []);
-      setPendingRecs(data.pendingRecommendations || []);
-      setApprovedRecs(data.approvedRecommendations || []);
-      setLiveActivityLog(data.activityLog || []);
+      if (data) {
+        if (data.zones) setActiveZones(data.zones);
+        if (data.pendingRecommendations) setPendingRecs(data.pendingRecommendations);
+        if (data.approvedRecommendations) setApprovedRecs(data.approvedRecommendations);
+        if (data.activityLog) setLiveActivityLog(data.activityLog);
+        if (data.resources) setLiveResources(data.resources);
+      }
     });
 
+    if (!socket.connected) {
+      setIsDisconnected(true);
+    }
+
     return () => {
+      socket.off('connect', handleConnect);
+      socket.off('disconnect', handleDisconnect);
+      socket.off('connect_error', handleConnectError);
+      socket.off('reconnect', handleReconnect);
       socket.off('storm_state_update');
     };
   }, []);
 
   const activeZonesCount = activeZones.length;
-  const availableResourcesCount = resources.filter(r => r.status === 'available').length;
+  const availableResourcesCount = liveResources.filter(r => r.status === 'available').length;
 
   const handleApprove = (rec) => {
-    socket.emit('approve_recommendation', rec);
+    let officer = null;
+    try {
+      const saved = localStorage.getItem('storm_officer');
+      if (saved) officer = JSON.parse(saved);
+    } catch {}
+
+    const payload = {
+      ...rec,
+      officerId: officer?.id || 'OFF-101',
+      officerName: officer?.name || 'Col. Rajesh Sharma',
+      rank: officer?.rank || 'SDMA Relief Commissioner'
+    };
+
+    socket.emit('approve_recommendation', payload);
     setPendingRecs(pendingRecs.filter(r => r.id !== rec.id));
-    setApprovedRecs([{ ...rec, status: 'approved', approvedAt: 'Just now' }, ...approvedRecs]);
+    setApprovedRecs([{ ...payload, status: 'approved', approvedAt: 'Just now' }, ...approvedRecs]);
   };
 
   const handleReject = (recId) => {
@@ -44,9 +102,45 @@ export default function Dashboard() {
     setPendingRecs(pendingRecs.filter(r => r.id !== recId));
   };
 
+  const handleExportCSV = () => {
+    if (!liveActivityLog || liveActivityLog.length === 0) {
+      alert("No activity log items available to export.");
+      return;
+    }
+
+    const headers = ["Time", "Type", "Event", "Officer ID", "Officer Name", "Timestamp"];
+    const rows = liveActivityLog.map(log => [
+      `"${log.time || ''}"`,
+      `"${log.type || ''}"`,
+      `"${(log.event || '').replace(/"/g, '""')}"`,
+      `"${log.officerId || ''}"`,
+      `"${log.officerName || ''}"`,
+      `"${log.timestamp || ''}"`
+    ]);
+
+    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `storm_activity_log_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="min-h-screen bg-[#0A0A0A] text-slate-100 pt-24 pb-12">
       
+      {/* Disconnection Alert Banner */}
+      {isDisconnected && (
+        <div className="bg-red-500/90 text-white font-mono text-xs px-4 py-2.5 text-center flex items-center justify-center gap-2 border-b border-red-400/30 sticky top-16 z-40 animate-pulse shadow-lg">
+          <AlertTriangle className="w-4 h-4 text-white" />
+          <span className="font-bold">Disconnected from server — retrying…</span>
+        </div>
+      )}
+
       {/* Persistent Demo View Top Banner */}
       <div className="bg-[#141414] border-b border-white/10 px-4 py-2.5 text-center text-xs font-mono flex items-center justify-between text-[#9A9A9A]">
         <div className="flex items-center gap-2">
@@ -86,7 +180,7 @@ export default function Dashboard() {
           <div className="p-6 rounded-2xl bg-[#141414] border border-white/10 space-y-1">
             <span className="text-xs font-mono uppercase tracking-wider text-[#9A9A9A]">Active Zones</span>
             <div className="text-3xl font-black text-white">{activeZonesCount}</div>
-            <span className="text-[11px] text-red-400 font-medium">2 Critical, 1 Warning</span>
+            <span className="text-[11px] text-red-400 font-medium">Live Telemetry Feeds</span>
           </div>
 
           <div className="p-6 rounded-2xl bg-[#141414] border border-white/10 space-y-1">
@@ -98,7 +192,7 @@ export default function Dashboard() {
           <div className="p-6 rounded-2xl bg-[#141414] border border-white/10 space-y-1">
             <span className="text-xs font-mono uppercase tracking-wider text-[#9A9A9A]">Resources Available</span>
             <div className="text-3xl font-black text-emerald-400">{availableResourcesCount}</div>
-            <span className="text-[11px] text-slate-400 font-medium">Out of {resources.length} Total</span>
+            <span className="text-[11px] text-slate-400 font-medium">Out of {liveResources.length} Total</span>
           </div>
 
           <div className="p-6 rounded-2xl bg-[#141414] border border-white/10 space-y-1">
@@ -209,6 +303,7 @@ export default function Dashboard() {
                         </div>
                         <p className="text-[11px] text-[#9A9A9A]">
                           Resource Assigned: {rec.resourceNeeded} • ETA: {rec.etaAI}
+                          {rec.approvedBy && <span className="text-emerald-400 ml-2 font-mono">({rec.approvedBy})</span>}
                         </p>
                       </div>
 
@@ -231,10 +326,20 @@ export default function Dashboard() {
                 <Radio className="w-4 h-4 text-[#FF6B1A]" />
                 <h2 className="text-base font-bold text-white">Recent Activity Feed</h2>
               </div>
-              <span className="text-[10px] font-mono text-emerald-400 animate-pulse">LIVE</span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleExportCSV}
+                  className="px-2.5 py-1 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#FF6B1A]/40 text-[#9A9A9A] hover:text-white rounded-lg text-[10px] font-mono font-bold flex items-center gap-1 transition-all cursor-pointer shadow"
+                  title="Download activity log as CSV file"
+                >
+                  <Download className="w-3 h-3 text-[#FF6B1A]" />
+                  <span>CSV</span>
+                </button>
+                <span className="text-[10px] font-mono text-emerald-400 animate-pulse">LIVE</span>
+              </div>
             </div>
 
-            <div className="p-6 rounded-2xl bg-[#141414] border border-white/10 space-y-4">
+            <div className="p-6 rounded-2xl bg-[#141414] border border-white/10 space-y-4 max-h-[500px] overflow-y-auto">
               {liveActivityLog.map((log, idx) => (
                 <div key={idx} className="flex items-start gap-3 text-xs pb-3 border-b border-white/5 last:border-0 last:pb-0">
                   <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
@@ -242,9 +347,14 @@ export default function Dashboard() {
                     log.type === 'approval' ? 'bg-emerald-400' :
                     log.type === 'system' ? 'bg-amber-400' : 'bg-[#FF6B1A]'
                   }`}></div>
-                  <div className="space-y-0.5">
+                  <div className="space-y-0.5 flex-1">
                     <p className="text-slate-200 leading-relaxed">{log.event}</p>
-                    <span className="text-[10px] text-slate-500 font-mono">{log.time}</span>
+                    <div className="flex items-center justify-between text-[10px] text-slate-500 font-mono pt-0.5">
+                      <span>{log.time}</span>
+                      {log.officerName && (
+                        <span className="text-emerald-400 font-semibold">{log.officerName}</span>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
