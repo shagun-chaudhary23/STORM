@@ -11,6 +11,14 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+process.on('uncaughtException', (err) => {
+  console.error('Server Uncaught Exception:', err.message);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('Server Unhandled Rejection:', reason);
+});
+
 // Officer Authentication endpoint
 app.post('/api/login', (req, res) => {
   const { officerId, password } = req.body;
@@ -37,7 +45,26 @@ app.post('/api/analyze', async (req, res) => {
     const { zone, resource } = req.body;
     
     if (!process.env.GEMINI_API_KEY) {
-      return res.status(400).json({ error: 'GEMINI_API_KEY is not set on the server.' });
+      const severity = Number(zone?.severity || 0);
+      const population = Number(zone?.population || 0);
+      const isCritical = severity >= 7;
+
+      return res.json({
+        id: 'DEMO-' + Date.now(),
+        zone: zone?.name || zone?.id || 'Target Zone',
+        action: isCritical
+          ? `Deploy ${resource?.name || 'a relief unit'} for immediate response and evacuation support`
+          : `Stage ${resource?.name || 'a relief unit'} near the zone for rapid response`,
+        etaAI: isCritical ? '38 mins' : '52 mins',
+        etaManual: isCritical ? '4-6 hrs' : '3 hrs',
+        confidence: isCritical ? 88 : 82,
+        resourceNeeded: resource?.name || 'Standard Relief Unit',
+        keyFactors: [
+          `${population.toLocaleString()} people in the affected zone`,
+          `${severity}/10 severity assessment`
+        ],
+        demoFallback: true
+      });
     }
 
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
@@ -99,7 +126,9 @@ function broadcastState() {
 // Fetch Disaster Feeds and generate recommendations
 async function fetchDisasterFeeds() {
   try {
-    const response = await axios.get('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson');
+    const response = await axios.get('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson', {
+      timeout: 5000
+    });
     let events = response.data.features || [];
     
     // Filter strictly for India

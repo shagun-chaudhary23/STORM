@@ -331,7 +331,7 @@ export default function Reason() {
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
                     <h3 className="text-sm font-mono font-bold uppercase tracking-wider text-emerald-400">
-                      AI RECOMMENDED ACTION
+                      {liveRecommendation?.demoFallback ? 'DEMO RECOMMENDATION' : 'AI RECOMMENDED ACTION'}
                     </h3>
                   </div>
 
@@ -345,6 +345,11 @@ export default function Reason() {
                   <p className="text-xs text-[#9A9A9A]">
                     Recommended Assets: <strong className="text-slate-200">{selectedResource.name}</strong> from {selectedResource.location}
                   </p>
+                  {liveRecommendation?.demoFallback && (
+                    <p className="text-xs text-amber-400">
+                      Gemini is not configured. This deterministic recommendation is for local demonstration only.
+                    </p>
+                  )}
                 </div>
 
                 <div className="p-4 rounded-xl bg-black/40 border border-emerald-500/20 flex items-center justify-between text-xs font-mono">
