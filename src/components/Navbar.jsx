@@ -1,11 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, Link, useNavigate } from 'react-router-dom';
-import { Zap, Menu, X, ArrowUpRight, UserCheck } from 'lucide-react';
+import { Zap, Menu, X, ArrowUpRight, UserCheck, LogOut } from 'lucide-react';
 
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeOfficer, setActiveOfficer] = useState(null);
   const navigate = useNavigate();
+
+  const handleLogout = () => {
+    localStorage.removeItem('storm_officer');
+    localStorage.removeItem('storm_officer_token');
+    window.dispatchEvent(new Event('storage'));
+    navigate('/login');
+  };
 
   useEffect(() => {
     const checkOfficer = () => {
@@ -89,9 +96,27 @@ export default function Navbar() {
         {/* Right Action: Officer status & Request Pilot Button */}
         <div className="hidden sm:flex items-center gap-2.5">
           {activeOfficer ? (
-            <div className="hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-950/60 border border-emerald-500/30 text-[10px] font-mono text-emerald-400">
-              <UserCheck className="w-3 h-3 text-[#FF6B1A]" />
-              <span className="font-bold truncate max-w-[140px]">{activeOfficer.name}</span>
+            <div className="relative group hidden lg:block">
+              <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-950/60 border border-emerald-500/30 text-[10px] font-mono text-emerald-400 hover:bg-emerald-950 transition-colors">
+                <UserCheck className="w-3 h-3 text-[#FF6B1A]" />
+                <span className="font-bold truncate max-w-[140px]">{activeOfficer.name}</span>
+              </button>
+              
+              <div className="absolute right-0 top-full mt-2 w-48 bg-[#141414] border border-white/10 rounded-xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                <div className="p-3 border-b border-white/5">
+                  <div className="text-xs font-bold text-white truncate">{activeOfficer.name}</div>
+                  <div className="text-[10px] text-slate-500 truncate">{activeOfficer.rank}</div>
+                </div>
+                <div className="p-1.5">
+                  <button 
+                    onClick={handleLogout}
+                    className="w-full text-left px-3 py-2 text-xs text-red-400 hover:bg-white/5 hover:text-red-300 rounded-lg transition-colors flex items-center gap-2 cursor-pointer"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    Sign Out
+                  </button>
+                </div>
+              </div>
             </div>
           ) : (
             <button
@@ -125,9 +150,21 @@ export default function Navbar() {
       {mobileOpen && (
         <div className="xl:hidden mt-3 bg-[#141414] border border-white/10 p-4 rounded-2xl space-y-1.5 animate-fade-in max-h-[80vh] overflow-y-auto">
           {activeOfficer ? (
-            <div className="mb-2 p-2.5 rounded-xl bg-emerald-950/40 border border-emerald-500/30 text-xs font-mono text-emerald-400 flex items-center gap-2">
-              <UserCheck className="w-4 h-4 text-[#FF6B1A]" />
-              <span>Signed in: <strong>{activeOfficer.name}</strong> ({activeOfficer.rank})</span>
+            <div className="mb-2 space-y-2">
+              <div className="p-2.5 rounded-xl bg-emerald-950/40 border border-emerald-500/30 text-xs font-mono text-emerald-400 flex items-center gap-2">
+                <UserCheck className="w-4 h-4 text-[#FF6B1A]" />
+                <span className="truncate">Signed in: <strong>{activeOfficer.name}</strong> ({activeOfficer.rank})</span>
+              </div>
+              <button
+                onClick={() => {
+                  setMobileOpen(false);
+                  handleLogout();
+                }}
+                className="w-full py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-xs font-bold text-red-400 transition-all flex items-center justify-center gap-2"
+              >
+                <LogOut className="w-4 h-4" />
+                Sign Out
+              </button>
             </div>
           ) : (
             <div className="mb-2">
