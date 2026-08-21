@@ -3,6 +3,7 @@ import { Routes, Route, useLocation } from 'react-router-dom';
 import { AppProvider } from './context/AppContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
+import GlobalNotificationToast from './components/GlobalNotificationToast';
 
 // Routed Pages & Features
 import Home from './pages/Home';
@@ -14,8 +15,11 @@ import Report from './pages/Report';
 import HowItWorks from './pages/HowItWorks';
 import About from './pages/About';
 import Login from './pages/Login';
+import TeamLogin from './pages/TeamLogin';
+import TeamDashboard from './pages/TeamDashboard';
 import Respond from './pages/Respond';
 import ProtectedRoute from './components/ProtectedRoute';
+import TeamProtectedRoute from './components/TeamProtectedRoute';
 
 // Scroll to top helper on route change
 function ScrollToTop() {
@@ -37,12 +41,15 @@ function ScrollToTop() {
 
 function MainLayout() {
   const location = useLocation();
-  const isDashboard = location.pathname === '/dashboard';
+  const isDashboard = location.pathname === '/dashboard' || location.pathname === '/team-dashboard';
   const isRespond = location.pathname.startsWith('/respond/');
 
   return (
     <div className="min-h-screen font-sans selection:bg-[#FF6B1A]/30 selection:text-[#FF6B1A] relative flex flex-col justify-between transition-colors duration-200">
       <ScrollToTop />
+
+      {/* Global In-App Live Notification Toast */}
+      <GlobalNotificationToast />
 
       {/* Sticky top nav with Theme toggle and Official Login (hidden on respond page for distraction-free briefing) */}
       {!isRespond && <Navbar />}
@@ -54,6 +61,7 @@ function MainLayout() {
           <Route path="/how-it-works" element={<HowItWorks />} />
           <Route path="/about" element={<About />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/team-login" element={<TeamLogin />} />
           <Route path="/respond/:token" element={<Respond />} />
           
           <Route element={<ProtectedRoute />}>
@@ -62,6 +70,10 @@ function MainLayout() {
             <Route path="/sense" element={<Sense />} />
             <Route path="/reason" element={<Reason />} />
             <Route path="/report" element={<Report />} />
+          </Route>
+
+          <Route element={<TeamProtectedRoute />}>
+            <Route path="/team-dashboard" element={<TeamDashboard />} />
           </Route>
         </Routes>
       </main>

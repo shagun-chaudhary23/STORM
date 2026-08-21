@@ -164,6 +164,19 @@ Use any of the following pre-seeded credentials to log in:
 
 ---
 
+## 🚛 Demo Deployment Team Leader Accounts
+
+Use any of the following pre-seeded credentials at `/team-login` to access the Unit Console:
+
+| Leader ID | Password | Unit / Team Name | Contact Phone |
+|---|---|---|---|
+| `TL-201` | `leader201` | Medical Team Alpha | `+916387095624` |
+| `TL-202` | `leader202` | NDRF Boat Unit 3 | `+916387095624` |
+| `TL-203` | `leader203` | Relief Kit Stock | `+916387095624` |
+| `TL-204` | `leader204` | Medical Team Beta | `+916387095624` |
+
+---
+
 ## ⚙️ Data Flow & Architecture
 
 1. **Telemetry Ingestion:** `server/index.js` polls USGS earthquake GeoJSON feeds and Open-Meteo multi-city weather streams every 30 seconds, generating dynamic `zones`.

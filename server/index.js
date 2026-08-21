@@ -64,7 +64,7 @@ app.post('/api/login', (req, res) => {
     broadcastState();
     
     const token = jwt.sign(
-      { id: officer.id, name: officer.name, rank: officer.rank, phone: officer.phone },
+      { id: officer.id, name: officer.name, rank: officer.rank, phone: officer.phone, role: 'officer' },
       process.env.JWT_SECRET || 'storm_fallback_secret_key',
       { expiresIn: '8h' }
     );
@@ -77,6 +77,55 @@ app.post('/api/login', (req, res) => {
 // List officers for demo selection
 app.get('/api/officers', (req, res) => {
   res.json(db.getOfficers());
+});
+
+// Deployment Team Leader Authentication endpoint
+app.post('/api/team-login', (req, res) => {
+  const leaderId = req.body.leaderId || req.body.id;
+  const password = req.body.password;
+  if (!leaderId || !password) {
+    return res.status(400).json({ error: 'Team Leader ID and password are required.' });
+  }
+
+  const leader = db.authenticateTeamLeader(leaderId, password);
+  if (leader) {
+    db.addLog(`Team Leader ${leader.name} (${leader.team_name}) signed in to tactical field session.`, 'system', leader.id, leader.name);
+    broadcastState();
+
+    const token = jwt.sign(
+      { id: leader.id, name: leader.name, phone: leader.phone, team_name: leader.team_name, role: 'team_leader' },
+      process.env.JWT_SECRET || 'storm_fallback_secret_key',
+      { expiresIn: '8h' }
+    );
+
+    return res.json({ success: true, leader, token });
+  }
+  return res.status(401).json({ error: 'Invalid Team Leader ID or Password.' });
+});
+
+// List deployment team leaders for demo selection
+app.get('/api/team-leaders', (req, res) => {
+  res.json(db.getTeamLeaders());
+});
+
+// Get deployments for the logged-in team leader
+app.get('/api/team-deployments', (req, res) => {
+  const authHeader = req.headers.authorization || '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.substring(7) : (req.headers['x-auth-token'] || req.query.token);
+  if (!token) {
+    return res.status(401).json({ error: 'Authentication token required.' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'storm_fallback_secret_key');
+    if (decoded.role !== 'team_leader') {
+      return res.status(403).json({ error: 'Access restricted to deployment team leaders.' });
+    }
+    const deployments = db.getDeploymentsByTeamLeader(decoded.id);
+    res.json({ success: true, deployments });
+  } catch (err) {
+    return res.status(401).json({ error: 'Invalid or expired authentication token.' });
+  }
 });
 
 // GET full live STORM state (instant bootstrap for fast page loads)
@@ -178,15 +227,47 @@ app.post('/api/deployments/:token/respond', async (req, res) => {
     return res.status(404).json({ error: 'Deployment token not found or expired.' });
   }
 
+  // Authorization check if caller provides a token
+  const authHeader = req.headers.authorization || '';
+  const authToken = authHeader.startsWith('Bearer ') ? authHeader.substring(7) : (req.headers['x-auth-token'] || req.body.token);
+  let callerInfo = null;
+
+  if (authToken) {
+    try {
+      callerInfo = jwt.verify(authToken, process.env.JWT_SECRET || 'storm_fallback_secret_key');
+      if (callerInfo.role === 'team_leader') {
+        // Enforce that team leader can only close their own deployment
+        const isAuthorized = (!deployment.team_leader_id || deployment.team_leader_id === callerInfo.id) ||
+                             (deployment.team_lead_phone && deployment.team_lead_phone === callerInfo.phone) ||
+                             (deployment.team_lead_name && deployment.team_lead_name.toLowerCase() === callerInfo.name.toLowerCase());
+        if (!isAuthorized) {
+          return res.status(403).json({ error: 'Unauthorized: You can only complete your own team deployments.' });
+        }
+      }
+    } catch {
+      // If token provided was invalid
+      return res.status(401).json({ error: 'Invalid authentication token.' });
+    }
+  }
+
   const updatedStatus = status.toLowerCase() === 'completed' ? 'completed' : 'incomplete';
   const updated = db.updateDeploymentStatus(token, updatedStatus, notes || '');
 
+  // If completed, release resource back to available and update zone incidents
+  if (updatedStatus === 'completed') {
+    if (deployment.resource_id || deployment.resource_name) {
+      db.releaseResource(deployment.resource_id || deployment.resource_name);
+    }
+    db.updateZoneOnDeploymentCompletion(deployment.zone_id, deployment.zone_name);
+  }
+
   const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   const statusLabel = updatedStatus === 'completed' ? 'Completed' : 'Incomplete';
+  const responderName = callerInfo ? callerInfo.name : (deployment.team_lead_name || deployment.resource_name || 'Team Lead');
 
   // Log in activity log
   db.addLog(
-    `Team ${deployment.team_lead_name || deployment.resource_name} marked mission as [${statusLabel}] at ${deployment.zone_name} (Notes: ${notes || 'None'}).`,
+    `Team ${responderName} marked mission as [${statusLabel}] at ${deployment.zone_name} (Notes: ${notes || 'None'}).`,
     'deployment_response',
     deployment.officer_id || null,
     deployment.officer_name || null
@@ -194,9 +275,23 @@ app.post('/api/deployments/:token/respond', async (req, res) => {
 
   // Send SMS back to deploying officer
   if (deployment.officer_phone) {
-    const officerSmsBody = `STORM UPDATE: Team Lead ${deployment.team_lead_name || 'Unit'} marked [${deployment.task_summary || deployment.resource_name}] as ${statusLabel} at ${deployment.zone_name} at ${timeStr}. Note: ${notes || 'No extra notes'}.`;
+    const officerSmsBody = `STORM UPDATE: Team Lead ${responderName} marked [${deployment.task_summary || deployment.resource_name}] as ${statusLabel} at ${deployment.zone_name} at ${timeStr}. Note: ${notes || 'No extra notes'}.`;
     await sendSMS(deployment.officer_phone, officerSmsBody);
   }
+
+  // Broadcast High-Priority Notification to Official HQ screens
+  io.emit('notification_broadcast', {
+    type: 'MISSION_COMPLETED',
+    title: `✅ MISSION ${statusLabel.toUpperCase()}: ${deployment.zone_name}`,
+    message: `Team Lead ${responderName} (${deployment.resource_name}) marked mission as [${statusLabel}] at ${deployment.zone_name}. Note: "${notes || 'None'}"`,
+    status: updatedStatus,
+    zoneName: deployment.zone_name,
+    resourceName: deployment.resource_name,
+    teamLeadName: responderName,
+    notes: notes || '',
+    officerName: deployment.officer_name,
+    timestamp: new Date().toISOString()
+  });
 
   broadcastState();
   res.json({ success: true, deployment: updated });
@@ -549,7 +644,7 @@ async function fetchDisasterFeeds() {
 // Helper to authenticate socket user from token or message payload
 function getSocketUser(socket, payload) {
   if (socket.user) return socket.user;
-  const token = payload?.token || socket.handshake.auth?.token;
+  const token = payload?.authToken || payload?.userToken || payload?.jwt || socket.handshake.auth?.token || payload?.token;
   if (!token) return null;
   try {
     return jwt.verify(token, process.env.JWT_SECRET || 'storm_fallback_secret_key');
@@ -582,7 +677,7 @@ io.on('connection', (socket) => {
     });
   });
 
-  socket.on('approve_recommendation', (rec) => {
+  socket.on('approve_recommendation', async (rec) => {
     const user = getSocketUser(socket, rec);
     if (!user) {
       return socket.emit('auth_error', { message: 'Authentication required to approve dispatch.' });
@@ -593,7 +688,73 @@ io.on('connection', (socket) => {
     
     const officerLabel = `Officer ${officerInfo.name} (${officerInfo.id || 'Command'})`;
     db.addLog(`${officerLabel} approved dispatch for ${rec.zone || 'designated sector'}.`, 'approval', officerInfo.id, officerInfo.name);
-    
+
+    // Auto-bind an available resource and dispatch deployment order to team leader
+    const allResources = db.getResources();
+    let matched = allResources.find(r => r.status === 'available' && (
+      (rec.resourceNeeded && (r.name.toLowerCase().includes(rec.resourceNeeded.toLowerCase()) || r.type.toLowerCase().includes(rec.resourceNeeded.toLowerCase())))
+    ));
+    if (!matched) {
+      matched = allResources.find(r => r.status === 'available');
+    }
+
+    let deploymentToken = null;
+    if (matched) {
+      const bound = db.bindResource(matched.id, rec.zoneId || rec.zone, rec.zone);
+      if (bound) {
+        deploymentToken = crypto.randomBytes(16).toString('hex');
+        const deployment = db.createDeployment({
+          token: deploymentToken,
+          resource_id: bound.id,
+          resource_name: bound.name,
+          zone_id: rec.zoneId || rec.zone,
+          zone_name: bound.assignedZone || rec.zone,
+          officer_id: officerInfo.id,
+          officer_name: officerInfo.name,
+          officer_phone: officerInfo.phone,
+          team_lead_name: bound.team_lead_name,
+          team_lead_phone: bound.team_lead_phone,
+          task_summary: rec.action || `Deploy ${bound.name} for emergency response at ${rec.zone}`,
+          severity: rec.severity || 7
+        });
+
+        db.addLog(`Resource ${bound.name} bound to ${bound.assignedZone} by ${officerInfo.name}.`, 'system', officerInfo.id, officerInfo.name);
+
+        if (bound.team_lead_phone) {
+          const appUrl = process.env.APP_URL || 'http://localhost:3000';
+          const respondLink = `${appUrl}/respond/${deploymentToken}`;
+          const smsBody = `STORM DISPATCH ORDER: Zone [${deployment.zone_name}] (Sev: ${deployment.severity}/10). Action: ${deployment.task_summary}. Authorized by ${officerInfo.name} (${officerInfo.rank || 'SDMA'}). Report status: ${respondLink}`;
+          
+          await sendSMS(bound.team_lead_phone, smsBody);
+          db.addLog(`Deployment briefing SMS dispatched to Team Lead ${bound.team_lead_name || 'Lead'} (${bound.team_lead_phone}).`, 'notification_sent', officerInfo.id, officerInfo.name);
+        }
+
+        // Broadcast High-Priority Dispatch Notification to all connected devices (Team Leader & HQ)
+        io.emit('notification_broadcast', {
+          type: 'DISPATCH_ORDER',
+          title: '🚨 NEW DISPATCH ORDER DISPATCHED',
+          message: `Unit [${bound.name}] dispatched to ${rec.zone} by ${officerInfo.name}. Directive: "${deployment.task_summary}"`,
+          zoneName: rec.zone,
+          resourceName: bound.name,
+          teamLeadName: bound.team_lead_name,
+          teamLeadPhone: bound.team_lead_phone,
+          officerName: officerInfo.name,
+          token: deploymentToken,
+          timestamp: new Date().toISOString()
+        });
+      }
+    } else {
+      // Broadcast recommendation approval notification
+      io.emit('notification_broadcast', {
+        type: 'DISPATCH_ORDER',
+        title: '📋 DISPATCH RECOMMENDATION APPROVED',
+        message: `${officerInfo.name} approved dispatch for ${rec.zone}: "${rec.action}"`,
+        zoneName: rec.zone,
+        officerName: officerInfo.name,
+        timestamp: new Date().toISOString()
+      });
+    }
+
     broadcastState();
   });
 
@@ -638,16 +799,98 @@ io.on('connection', (socket) => {
       
       // Outbound SMS to Team Lead
       if (updated.team_lead_phone) {
-        const appUrl = process.env.APP_URL || 'http://localhost:5173';
+        const appUrl = process.env.APP_URL || 'http://localhost:3000';
         const respondLink = `${appUrl}/respond/${token}`;
-        const smsBody = `STORM DISPATCH ORDER: Zone [${deployment.zone_name}] (Sev: ${deployment.severity}/10). Action: ${deployment.task_summary}. Authorized by ${user.name} (${user.rank}). Please report status here: ${respondLink}`;
+        const smsBody = `STORM DISPATCH ORDER: Zone [${deployment.zone_name}] (Sev: ${deployment.severity}/10). Action: ${deployment.task_summary}. Authorized by ${user.name} (${user.rank || 'SDMA'}). Report status: ${respondLink}`;
         
         await sendSMS(updated.team_lead_phone, smsBody);
         db.addLog(`Deployment briefing SMS dispatched to Team Lead ${updated.team_lead_name || 'Lead'} (${updated.team_lead_phone}).`, 'notification_sent', user.id, user.name);
       }
 
+      // Broadcast High-Priority Dispatch Notification to all connected clients
+      io.emit('notification_broadcast', {
+        type: 'DISPATCH_ORDER',
+        title: '🚨 NEW DISPATCH ORDER DISPATCHED',
+        message: `Unit [${updated.name}] dispatched to ${deployment.zone_name} by ${user.name}. Directive: "${deployment.task_summary}"`,
+        zoneName: deployment.zone_name,
+        resourceName: updated.name,
+        teamLeadName: updated.team_lead_name,
+        teamLeadPhone: updated.team_lead_phone,
+        officerName: user.name,
+        token,
+        timestamp: new Date().toISOString()
+      });
+
       broadcastState();
     }
+  });
+
+  socket.on('team_respond_deployment', async (payload) => {
+    const user = getSocketUser(socket, payload);
+    if (!user || user.role !== 'team_leader') {
+      return socket.emit('auth_error', { message: 'Deployment team leader authentication required.' });
+    }
+
+    const { token, status, notes } = payload;
+    if (!token || !status) {
+      return socket.emit('action_error', { message: 'Token and status are required.' });
+    }
+
+    const deployment = db.getDeploymentByToken(token);
+    if (!deployment) {
+      return socket.emit('action_error', { message: 'Deployment not found or expired.' });
+    }
+
+    // Authorization check
+    const isAuthorized = (!deployment.team_leader_id || deployment.team_leader_id === user.id) ||
+                         (deployment.team_lead_phone && deployment.team_lead_phone === user.phone) ||
+                         (deployment.team_lead_name && deployment.team_lead_name.toLowerCase() === user.name.toLowerCase());
+    if (!isAuthorized) {
+      return socket.emit('auth_error', { message: 'Unauthorized: You can only update deployments assigned to your team.' });
+    }
+
+    const updatedStatus = status.toLowerCase() === 'completed' ? 'completed' : 'incomplete';
+    const updated = db.updateDeploymentStatus(token, updatedStatus, notes || '');
+
+    // Release resource and update zone if completed
+    if (updatedStatus === 'completed') {
+      if (deployment.resource_id || deployment.resource_name) {
+        db.releaseResource(deployment.resource_id || deployment.resource_name);
+      }
+      db.updateZoneOnDeploymentCompletion(deployment.zone_id, deployment.zone_name);
+    }
+
+    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const statusLabel = updatedStatus === 'completed' ? 'Completed' : 'Incomplete';
+
+    db.addLog(
+      `Team Leader ${user.name} (${user.team_name}) marked mission as [${statusLabel}] at ${deployment.zone_name} (Notes: ${notes || 'None'}).`,
+      'deployment_response',
+      deployment.officer_id || null,
+      deployment.officer_name || null
+    );
+
+    if (deployment.officer_phone) {
+      const officerSmsBody = `STORM UPDATE: Team Lead ${user.name} (${user.team_name}) marked [${deployment.task_summary || deployment.resource_name}] as ${statusLabel} at ${deployment.zone_name} at ${timeStr}. Note: ${notes || 'No extra notes'}.`;
+      await sendSMS(deployment.officer_phone, officerSmsBody);
+    }
+
+    // Broadcast High-Priority Mission Completion / Incomplete Notification to Officials
+    io.emit('notification_broadcast', {
+      type: 'MISSION_COMPLETED',
+      title: `✅ MISSION ${statusLabel.toUpperCase()}: ${deployment.zone_name}`,
+      message: `Team Lead ${user.name} (${user.team_name}) marked mission as [${statusLabel}] at ${deployment.zone_name}. Note: "${notes || 'None'}"`,
+      status: updatedStatus,
+      zoneName: deployment.zone_name,
+      resourceName: deployment.resource_name,
+      teamLeadName: user.name,
+      notes: notes || '',
+      officerName: deployment.officer_name,
+      timestamp: new Date().toISOString()
+    });
+
+    broadcastState();
+    socket.emit('team_deployment_updated', { success: true, deployment: updated });
   });
 
   socket.on('disconnect', () => {

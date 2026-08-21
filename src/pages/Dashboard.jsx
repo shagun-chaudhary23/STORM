@@ -66,7 +66,7 @@ export default function Dashboard() {
     <div className="min-h-screen bg-[#0A0A0A] text-slate-100 pt-24 pb-12">
       
       {/* Critical In-App Alert Banner */}
-      {inAppAlert && (
+      {inAppAlert && inAppAlert.type === 'CRITICAL_ZONE_ALERT' && (
         <div className="bg-red-600 text-white font-mono text-xs px-4 py-3 flex flex-col md:flex-row items-start md:items-center justify-between border-b border-red-400 sticky top-16 z-50 shadow-2xl gap-2">
           <div className="flex items-start gap-2 max-w-5xl">
             <AlertTriangle className="w-5 h-5 flex-shrink-0 animate-pulse text-amber-300 mt-0.5" />

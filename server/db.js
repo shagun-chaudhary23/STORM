@@ -85,6 +85,15 @@ db.exec(`
     timestamp TEXT
   );
 
+  CREATE TABLE IF NOT EXISTS team_leaders (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    phone TEXT NOT NULL,
+    passwordHash TEXT NOT NULL,
+    team_name TEXT NOT NULL,
+    created_at TEXT
+  );
+
   CREATE TABLE IF NOT EXISTS deployments (
     id TEXT PRIMARY KEY,
     token TEXT UNIQUE NOT NULL,
@@ -95,6 +104,7 @@ db.exec(`
     officer_id TEXT,
     officer_name TEXT,
     officer_phone TEXT,
+    team_leader_id TEXT,
     team_lead_name TEXT,
     team_lead_phone TEXT,
     task_summary TEXT,
@@ -126,6 +136,7 @@ safeAddColumn('resources', 'team_lead_phone TEXT');
 safeAddColumn('officers', 'phone TEXT');
 safeAddColumn('field_reports', 'reporter_name TEXT');
 safeAddColumn('field_reports', 'reporter_phone TEXT');
+safeAddColumn('deployments', 'team_leader_id TEXT');
 
 // Initial seed data with configured real notification routing
 const initialResources = [
@@ -133,6 +144,13 @@ const initialResources = [
   { id: "RES-2", name: "NDRF Boat Unit 3", type: "rescue", status: "available", location: "Teesta River Post", assignedZone: null, quantity: null, team_lead_name: "Subedar S. Roy", team_lead_phone: "+916387095624" },
   { id: "RES-3", name: "Relief Kit Stock", type: "supplies", status: "available", location: "Central Warehouse", assignedZone: null, quantity: 850, team_lead_name: "Inspector K. Das", team_lead_phone: "+916387095624" },
   { id: "RES-4", name: "Medical Team Beta", type: "medical", status: "deployed", location: "Zone 2A", assignedZone: "Zone 2A – Kalimpong", quantity: null, team_lead_name: "Dr. V. Rao", team_lead_phone: "+916387095624" }
+];
+
+const initialTeamLeaders = [
+  { id: "TL-201", name: "Major Dr. R. Nair", phone: "+916387095624", team_name: "Medical Team Alpha", passwordHash: bcrypt.hashSync("leader201", 10), created_at: new Date().toISOString() },
+  { id: "TL-202", name: "Subedar S. Roy", phone: "+916387095624", team_name: "NDRF Boat Unit 3", passwordHash: bcrypt.hashSync("leader202", 10), created_at: new Date().toISOString() },
+  { id: "TL-203", name: "Inspector K. Das", phone: "+916387095624", team_name: "Relief Kit Stock", passwordHash: bcrypt.hashSync("leader203", 10), created_at: new Date().toISOString() },
+  { id: "TL-204", name: "Dr. V. Rao", phone: "+916387095624", team_name: "Medical Team Beta", passwordHash: bcrypt.hashSync("leader204", 10), created_at: new Date().toISOString() }
 ];
 
 const initialOfficers = [
@@ -168,6 +186,53 @@ function seedDatabaseIfEmpty() {
         WHERE id = ?
       `).run(r.team_lead_name, r.team_lead_phone, r.id);
     }
+  }
+
+  const leadCount = db.prepare('SELECT COUNT(*) as count FROM team_leaders').get().count;
+  if (leadCount === 0) {
+    const insertLeader = db.prepare(`
+      INSERT INTO team_leaders (id, name, phone, passwordHash, team_name, created_at)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `);
+    const insertManyLeaders = db.transaction((leaders) => {
+      for (const l of leaders) {
+        insertLeader.run(l.id, l.name, l.phone, l.passwordHash, l.team_name, l.created_at || new Date().toISOString());
+      }
+    });
+    insertManyLeaders(initialTeamLeaders);
+  } else {
+    for (const l of initialTeamLeaders) {
+      const existing = db.prepare('SELECT * FROM team_leaders WHERE id = ?').get(l.id);
+      if (existing) {
+        let hash = existing.passwordHash;
+        if (!hash.startsWith('$2b$') && !hash.startsWith('$2a$')) {
+          hash = bcrypt.hashSync(hash, 10);
+        }
+        db.prepare(`
+          UPDATE team_leaders 
+          SET passwordHash = ?, phone = ?, team_name = ?, name = ?
+          WHERE id = ?
+        `).run(hash, l.phone, l.team_name, l.name, l.id);
+      }
+    }
+  }
+
+  // Backfill deployments table with team_leader_id if null
+  try {
+    db.exec(`
+      UPDATE deployments
+      SET team_leader_id = (
+        SELECT id FROM team_leaders 
+        WHERE team_leaders.phone = deployments.team_lead_phone 
+           OR team_leaders.name = deployments.team_lead_name 
+           OR team_leaders.team_name = deployments.resource_name
+        LIMIT 1
+      )
+      WHERE (team_leader_id IS NULL OR team_leader_id = '') 
+        AND (team_lead_phone IS NOT NULL OR team_lead_name IS NOT NULL OR resource_name IS NOT NULL);
+    `);
+  } catch (err) {
+    console.warn('Deployments team_leader_id backfill warning:', err.message);
   }
 
   const offCount = db.prepare('SELECT COUNT(*) as count FROM officers').get().count;
@@ -416,6 +481,40 @@ function authenticateOfficer(officerId, password) {
   return null;
 }
 
+function getTeamLeaders() {
+  return db.prepare('SELECT id, name, phone, team_name, created_at FROM team_leaders ORDER BY id ASC').all();
+}
+
+function getTeamLeaderById(id) {
+  return db.prepare('SELECT id, name, phone, team_name, created_at FROM team_leaders WHERE id = ?').get(id);
+}
+
+function authenticateTeamLeader(leaderId, password) {
+  if (!leaderId || !password) return null;
+  const leader = db.prepare('SELECT * FROM team_leaders WHERE id = ? OR LOWER(name) = LOWER(?)').get(leaderId.trim(), leaderId.trim());
+  if (!leader) return null;
+
+  let valid = false;
+  if (leader.passwordHash && (leader.passwordHash.startsWith('$2a$') || leader.passwordHash.startsWith('$2b$'))) {
+    valid = bcrypt.compareSync(password, leader.passwordHash);
+  } else if (leader.passwordHash === password) {
+    valid = true;
+    const newHash = bcrypt.hashSync(password, 10);
+    db.prepare('UPDATE team_leaders SET passwordHash = ? WHERE id = ?').run(newHash, leader.id);
+  }
+
+  if (valid) {
+    return {
+      id: leader.id,
+      name: leader.name,
+      phone: leader.phone,
+      team_name: leader.team_name,
+      role: 'team_leader'
+    };
+  }
+  return null;
+}
+
 // Inquiries / Pilot Requests
 function saveInquiry(inquiry) {
   const id = inquiry.id || `INQ-${Date.now()}`;
@@ -437,18 +536,31 @@ function createDeployment(dep) {
   const token = dep.token || require('crypto').randomBytes(16).toString('hex');
   const now = new Date().toISOString();
   
+  // Resolve team_leader_id if not provided
+  let teamLeaderId = dep.team_leader_id || null;
+  if (!teamLeaderId) {
+    const leader = db.prepare(`
+      SELECT id FROM team_leaders 
+      WHERE phone = ? OR name = ? OR team_name = ?
+      LIMIT 1
+    `).get(dep.team_lead_phone || '', dep.team_lead_name || '', dep.resource_name || '');
+    if (leader) {
+      teamLeaderId = leader.id;
+    }
+  }
+
   db.prepare(`
     INSERT INTO deployments (
       id, token, resource_id, resource_name, zone_id, zone_name,
       officer_id, officer_name, officer_phone,
-      team_lead_name, team_lead_phone, task_summary, severity,
+      team_leader_id, team_lead_name, team_lead_phone, task_summary, severity,
       status, notes, created_at, updated_at
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id, token, dep.resource_id, dep.resource_name, dep.zone_id, dep.zone_name,
     dep.officer_id, dep.officer_name, dep.officer_phone,
-    dep.team_lead_name, dep.team_lead_phone, dep.task_summary, dep.severity || 5,
+    teamLeaderId, dep.team_lead_name, dep.team_lead_phone, dep.task_summary, dep.severity || 5,
     'pending', null, now, now
   );
 
@@ -457,6 +569,49 @@ function createDeployment(dep) {
 
 function getDeploymentByToken(token) {
   return db.prepare('SELECT * FROM deployments WHERE token = ?').get(token);
+}
+
+function getDeploymentsByTeamLeader(teamLeaderId) {
+  return db.prepare(`
+    SELECT * FROM deployments 
+    WHERE team_leader_id = ? 
+       OR team_lead_phone IN (SELECT phone FROM team_leaders WHERE id = ?)
+       OR team_lead_name IN (SELECT name FROM team_leaders WHERE id = ?)
+    ORDER BY created_at DESC, id DESC
+  `).all(teamLeaderId, teamLeaderId, teamLeaderId);
+}
+
+function releaseResource(resourceId) {
+  if (!resourceId) return null;
+  db.prepare(`
+    UPDATE resources
+    SET status = 'available', assignedZone = NULL
+    WHERE id = ? OR name = ?
+  `).run(resourceId, resourceId);
+  return db.prepare('SELECT * FROM resources WHERE id = ? OR name = ?').get(resourceId, resourceId);
+}
+
+function updateZoneOnDeploymentCompletion(zoneId, zoneName) {
+  const zoneIdentifier = zoneId || zoneName;
+  if (!zoneIdentifier) return;
+  const zone = db.prepare('SELECT * FROM zones WHERE id = ? OR name = ?').get(zoneIdentifier, zoneIdentifier);
+  if (!zone) return;
+
+  // Check if any open deployments remain for this zone
+  const pendingDeps = db.prepare(`
+    SELECT COUNT(*) as count FROM deployments 
+    WHERE (zone_id = ? OR zone_name = ?) AND status = 'pending'
+  `).get(zone.id, zone.name).count;
+
+  if (pendingDeps === 0) {
+    const newIncidents = Math.max(0, (zone.activeIncidents || 1) - 1);
+    const newStatus = newIncidents === 0 ? (zone.severity > 7 ? 'warning' : 'stable') : zone.status;
+    db.prepare(`
+      UPDATE zones 
+      SET activeIncidents = ?, status = ?
+      WHERE id = ?
+    `).run(newIncidents, newStatus, zone.id);
+  }
 }
 
 function updateDeploymentStatus(token, status, notes = '') {
@@ -496,11 +651,17 @@ module.exports = {
   rejectRecommendation,
   getResources,
   bindResource,
+  releaseResource,
   getActivityLog,
   addLog,
   getOfficers,
   getOfficerById,
   authenticateOfficer,
+  getTeamLeaders,
+  getTeamLeaderById,
+  authenticateTeamLeader,
+  getDeploymentsByTeamLeader,
+  updateZoneOnDeploymentCompletion,
   getFieldReports,
   addFieldReport,
   saveInquiry,

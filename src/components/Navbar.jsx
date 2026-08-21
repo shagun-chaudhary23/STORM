@@ -10,28 +10,44 @@ import {
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const navigate = useNavigate();
-  const { theme, toggleTheme, activeOfficer, logoutOfficer, openLoginModal } = useApp();
+  const { 
+    theme, 
+    toggleTheme, 
+    activeOfficer, 
+    logoutOfficer, 
+    openLoginModal,
+    activeTeamLeader,
+    logoutTeamLeader
+  } = useApp();
 
-  const handleLogout = () => {
+  const handleOfficerLogout = () => {
     logoutOfficer();
-    localStorage.removeItem('storm_officer');
-    localStorage.removeItem('storm_officer_token');
-    window.dispatchEvent(new Event('storage'));
     navigate('/login');
+  };
+
+  const handleTeamLogout = () => {
+    logoutTeamLeader();
+    navigate('/team-login');
   };
 
   const allNavItems = [
     { name: 'HOME', path: '/', public: true },
-    { name: 'DASHBOARD', path: '/dashboard', public: false },
-    { name: 'RESOURCES', path: '/resources', public: false },
-    { name: 'SENSE', path: '/sense', public: false },
-    { name: 'REASON', path: '/reason', public: false },
-    { name: 'REPORT', path: '/report', public: false },
+    { name: 'DASHBOARD', path: '/dashboard', forOfficer: true },
+    { name: 'RESOURCES', path: '/resources', forOfficer: true },
+    { name: 'SENSE', path: '/sense', forOfficer: true },
+    { name: 'REASON', path: '/reason', forOfficer: true },
+    { name: 'REPORT', path: '/report', forOfficer: true },
+    { name: 'UNIT DASHBOARD', path: '/team-dashboard', forTeamLead: true },
     { name: 'HOW IT WORKS', path: '/how-it-works', public: true },
     { name: 'ABOUT', path: '/about', public: true },
   ];
 
-  const navItems = allNavItems.filter(item => item.public || activeOfficer);
+  const navItems = allNavItems.filter(item => {
+    if (item.public) return true;
+    if (item.forOfficer && activeOfficer) return true;
+    if (item.forTeamLead && activeTeamLeader) return true;
+    return false;
+  });
 
   return (
     <>
@@ -79,7 +95,7 @@ export default function Navbar() {
             ))}
           </nav>
 
-          {/* Right Action Bar: Theme Toggle + Official Login / Officer Badge + Request Pilot */}
+          {/* Right Action Bar */}
           <div className="hidden sm:flex items-center gap-2">
             
             {/* Dark / Light Theme Toggle */}
@@ -96,12 +112,12 @@ export default function Navbar() {
               )}
             </button>
 
-            {/* Official Login Portal Button / Active Officer Badge */}
-            {activeOfficer ? (
+            {/* Officer Session Badge */}
+            {activeOfficer && (
               <div className="relative group">
                 <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-950/60 border border-emerald-500/30 text-[10px] font-mono text-emerald-400 hover:bg-emerald-950 transition-colors">
                   <UserCheck className="w-3.5 h-3.5 text-[#FF6B1A]" />
-                  <span className="font-bold truncate max-w-[130px]">{activeOfficer.name}</span>
+                  <span className="font-bold truncate max-w-[120px]">{activeOfficer.name}</span>
                 </button>
 
                 <div className="absolute right-0 top-full mt-2 w-48 bg-[#141414] border border-white/10 rounded-xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
@@ -111,7 +127,7 @@ export default function Navbar() {
                   </div>
                   <div className="p-1.5">
                     <button 
-                      onClick={handleLogout}
+                      onClick={handleOfficerLogout}
                       className="w-full text-left px-3 py-2 text-xs text-red-400 hover:bg-white/5 hover:text-red-300 rounded-lg transition-colors flex items-center gap-2 cursor-pointer"
                     >
                       <LogOut className="w-3.5 h-3.5" />
@@ -120,20 +136,56 @@ export default function Navbar() {
                   </div>
                 </div>
               </div>
-            ) : (
+            )}
+
+            {/* Team Leader Session Badge */}
+            {activeTeamLeader && (
+              <div className="relative group">
+                <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-teal-950/60 border border-teal-500/30 text-[10px] font-mono text-teal-300 hover:bg-teal-950 transition-colors">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                  <span className="font-bold truncate max-w-[120px]">{activeTeamLeader.name}</span>
+                </button>
+
+                <div className="absolute right-0 top-full mt-2 w-52 bg-[#141414] border border-white/10 rounded-xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                  <div className="p-3 border-b border-white/5">
+                    <div className="text-xs font-bold text-white truncate">{activeTeamLeader.name}</div>
+                    <div className="text-[10px] text-emerald-400 font-mono truncate">{activeTeamLeader.team_name}</div>
+                    <div className="text-[9px] text-slate-500 font-mono mt-0.5">{activeTeamLeader.id}</div>
+                  </div>
+                  <div className="p-1.5 space-y-1">
+                    <Link
+                      to="/team-dashboard"
+                      className="block px-3 py-1.5 text-xs text-slate-200 hover:bg-white/5 rounded-lg transition-colors"
+                    >
+                      Unit Dashboard
+                    </Link>
+                    <button 
+                      onClick={handleTeamLogout}
+                      className="w-full text-left px-3 py-1.5 text-xs text-red-400 hover:bg-white/5 hover:text-red-300 rounded-lg transition-colors flex items-center gap-2 cursor-pointer"
+                    >
+                      <LogOut className="w-3.5 h-3.5" />
+                      Sign Out
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Logged-out buttons */}
+            {!activeOfficer && !activeTeamLeader && (
               <div className="flex items-center gap-1.5">
                 <button
-                  onClick={openLoginModal}
+                  onClick={() => navigate('/login')}
                   className="px-3 py-1.5 text-[10px] uppercase tracking-wider font-extrabold text-white bg-[#1a1a1a] hover:bg-[#252525] border border-white/10 rounded-full shadow transition-all cursor-pointer inline-flex items-center gap-1.5"
                 >
                   <KeyRound className="w-3 h-3 text-[#FF6B1A]" />
-                  <span>Official Login</span>
+                  <span>Officer Login</span>
                 </button>
                 <button
-                  onClick={() => navigate('/login')}
-                  className="py-1.5 px-3 text-[10px] uppercase tracking-wider font-bold text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 rounded-full border border-white/10 transition-all cursor-pointer"
+                  onClick={() => navigate('/team-login')}
+                  className="py-1.5 px-3 text-[10px] uppercase tracking-wider font-bold text-emerald-400 hover:text-emerald-300 bg-emerald-950/40 hover:bg-emerald-950/70 rounded-full border border-emerald-500/30 transition-all cursor-pointer"
                 >
-                  Sign In
+                  Team Lead
                 </button>
               </div>
             )}
@@ -175,26 +227,36 @@ export default function Navbar() {
               <div className="p-2.5 rounded-xl bg-emerald-950/40 border border-emerald-500/30 text-xs font-mono text-emerald-400 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <UserCheck className="w-4 h-4 text-[#FF6B1A]" />
-                  <span className="truncate">Signed in: <strong>{activeOfficer.name}</strong></span>
+                  <span className="truncate">Officer: <strong>{activeOfficer.name}</strong></span>
                 </div>
-                <button onClick={handleLogout} className="text-slate-400 hover:text-red-400 p-1">
+                <button onClick={handleOfficerLogout} className="text-slate-400 hover:text-red-400 p-1">
+                  <LogOut className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : activeTeamLeader ? (
+              <div className="p-2.5 rounded-xl bg-teal-950/40 border border-teal-500/30 text-xs font-mono text-teal-300 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                  <span className="truncate">Lead: <strong>{activeTeamLeader.name}</strong></span>
+                </div>
+                <button onClick={handleTeamLogout} className="text-slate-400 hover:text-red-400 p-1">
                   <LogOut className="w-3.5 h-3.5" />
                 </button>
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-2">
                 <button
-                  onClick={() => { setMobileOpen(false); openLoginModal(); }}
+                  onClick={() => { setMobileOpen(false); navigate('/login'); }}
                   className="py-2.5 px-3 rounded-xl bg-slate-800 text-xs font-bold text-white flex items-center justify-center gap-1.5"
                 >
                   <KeyRound className="w-3.5 h-3.5 text-[#FF6B1A]" />
-                  <span>Modal Login</span>
+                  <span>Officer Login</span>
                 </button>
                 <button
-                  onClick={() => { setMobileOpen(false); navigate('/login'); }}
-                  className="py-2.5 px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-bold text-white flex items-center justify-center gap-1.5"
+                  onClick={() => { setMobileOpen(false); navigate('/team-login'); }}
+                  className="py-2.5 px-3 rounded-xl bg-emerald-950/40 hover:bg-emerald-950/70 border border-emerald-500/30 text-xs font-bold text-emerald-300 flex items-center justify-center gap-1.5"
                 >
-                  <span>Login Page</span>
+                  <span>Team Lead</span>
                 </button>
               </div>
             )}
