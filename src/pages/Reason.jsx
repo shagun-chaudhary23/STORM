@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import io from 'socket.io-client';
 import { useApp } from '../context/AppContext';
 import { 
   Cpu, ArrowRight, UserCheck, ShieldCheck, Clock, 
@@ -8,22 +7,22 @@ import {
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-const socket = io(API_URL, {
-  auth: { token: localStorage.getItem('storm_officer_token') },
-  reconnection: true,
-  reconnectionAttempts: 5,
-  reconnectionDelay: 1000,
-  reconnectionDelayMax: 5000,
-  randomizationFactor: 0.5,
-  timeout: 5000
-});
-
 export default function Reason() {
-  const { activeOfficer, logoutOfficer, openLoginModal } = useApp();
+  const { 
+    activeOfficer, 
+    logoutOfficer, 
+    openLoginModal,
+    zones: activeZones,
+    resources: activeResources,
+    pendingRecommendations,
+    approvedRecommendations,
+    approveRecommendation
+  } = useApp();
 
-  const [activeZones, setActiveZones] = useState([]);
-  const [activeResources, setActiveResources] = useState([]);
-  const [activeRecommendations, setActiveRecommendations] = useState([]);
+  const activeRecommendations = [
+    ...(pendingRecommendations || []),
+    ...(approvedRecommendations || [])
+  ];
 
   const [selectedZoneId, setSelectedZoneId] = useState('');
   const [selectedResourceName, setSelectedResourceName] = useState('');
@@ -33,42 +32,16 @@ export default function Reason() {
   const [liveRecommendation, setLiveRecommendation] = useState(null);
 
   useEffect(() => {
-    // Keep socket token in sync with localStorage
-    socket.auth = { token: localStorage.getItem('storm_officer_token') };
+    if (!selectedZoneId && activeZones.length > 0) {
+      setSelectedZoneId(activeZones[0].id);
+    }
+  }, [activeZones, selectedZoneId]);
 
-    socket.on('storm_state_update', (data) => {
-      if (data) {
-        if (data.zones) {
-          setActiveZones(data.zones);
-          if (!selectedZoneId && data.zones.length > 0) {
-            setSelectedZoneId(data.zones[0].id);
-          }
-        }
-        if (data.resources) {
-          setActiveResources(data.resources);
-          if (!selectedResourceName && data.resources.length > 0) {
-            setSelectedResourceName(data.resources[0].name);
-          }
-        }
-        if (data.pendingRecommendations || data.approvedRecommendations) {
-          setActiveRecommendations([
-            ...(data.pendingRecommendations || []), 
-            ...(data.approvedRecommendations || [])
-          ]);
-        }
-      }
-    });
-
-    socket.on('auth_error', (data) => {
-      alert(`Authentication Error: ${data.message || 'Action rejected by security gateway.'}`);
-      openLoginModal();
-    });
-
-    return () => {
-      socket.off('storm_state_update');
-      socket.off('auth_error');
-    };
-  }, [selectedZoneId, selectedResourceName, openLoginModal]);
+  useEffect(() => {
+    if (!selectedResourceName && activeResources.length > 0) {
+      setSelectedResourceName(activeResources[0].name);
+    }
+  }, [activeResources, selectedResourceName]);
 
   // Match recommendation for selected zone or fallback to first
   const currentZone = activeZones.find(z => z.id === selectedZoneId) || activeZones[0] || null;
@@ -109,12 +82,6 @@ export default function Reason() {
   };
 
   const handleApprove = () => {
-    if (!activeOfficer) {
-      openLoginModal();
-      return;
-    }
-
-    const token = localStorage.getItem('storm_officer_token');
     const recPayload = {
       id: currentRec.id || `REC-AI-${Date.now()}`,
       recommendationId: currentRec.id || `REC-AI-${Date.now()}`,
@@ -124,15 +91,13 @@ export default function Reason() {
       etaAI: currentRec.etaAI || '15 mins',
       etaManual: currentRec.etaManual || '3 hrs',
       confidence: currentRec.confidence || 90,
-      officerId: activeOfficer.id,
-      officerName: activeOfficer.name,
-      rank: activeOfficer.rank,
-      token: token,
       timestamp: new Date().toISOString()
     };
 
-    socket.emit('approve_recommendation', recPayload);
-    setIsApproved(true);
+    const success = approveRecommendation(recPayload);
+    if (success) {
+      setIsApproved(true);
+    }
   };
 
   return (

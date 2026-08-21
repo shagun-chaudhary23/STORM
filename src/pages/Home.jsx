@@ -1,32 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import io from 'socket.io-client';
+import { useApp } from '../context/AppContext';
 import { 
   CheckCircle2, ArrowRight, ShieldCheck, AlertTriangle, 
   Activity, PhoneOff, DatabaseZap, Clock, Radio, ChevronRight, Layers, FileCheck
 } from 'lucide-react';
 import { SIKKIM_CASE_STUDY } from '../data/mockData';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-const socket = io(API_URL, {
-  reconnection: true,
-  reconnectionAttempts: 5,
-  reconnectionDelay: 1000
-});
-
 export default function Home() {
   const navigate = useNavigate();
-
-  const [activeZones, setActiveZones] = useState([]);
-  const [pendingCount, setPendingCount] = useState(0);
-
-  useEffect(() => {
-    socket.on('storm_state_update', (data) => {
-      setActiveZones(data.zones || []);
-      setPendingCount((data.pendingRecommendations || []).length);
-    });
-    return () => socket.off('storm_state_update');
-  }, []);
+  const { zones: activeZones, pendingRecommendations } = useApp();
+  const pendingCount = (pendingRecommendations || []).length;
 
   // Highest severity zone from live feed
   const highestZone = activeZones.length > 0 

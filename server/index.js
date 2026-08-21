@@ -1,4 +1,6 @@
+const path = require('path');
 require('dotenv').config();
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -77,6 +79,18 @@ app.get('/api/officers', (req, res) => {
   res.json(db.getOfficers());
 });
 
+// GET full live STORM state (instant bootstrap for fast page loads)
+app.get('/api/state', (req, res) => {
+  res.json({
+    zones: db.getZones(),
+    pendingRecommendations: db.getPendingRecommendations(),
+    approvedRecommendations: db.getApprovedRecommendations(),
+    activityLog: db.getActivityLog(),
+    resources: db.getResources(),
+    fieldReports: db.getFieldReports()
+  });
+});
+
 // GET all field reports
 app.get('/api/reports', (req, res) => {
   res.json(db.getFieldReports());
@@ -105,6 +119,19 @@ app.post('/api/reports', (req, res) => {
   const savedReport = db.addFieldReport(report);
   const byLabel = reporterName ? `${reporterName} (${reporterPhone || 'Field'})` : 'Ground Observer';
   db.addLog(`Field report submitted for ${location} (${category}) by ${byLabel}.`, 'report', 'FIELD-01', reporterName || 'Ground Observer');
+
+  // If report severity is critical / greater than 8, trigger immediate official notification
+  const numSeverity = severity === 'Critical' ? 9 : (severity === 'High' ? 8 : (Number(severity) || 5));
+  if (numSeverity > 8) {
+    notifyOfficialsOfCriticalDisaster({
+      id: savedReport.id,
+      name: location,
+      type: category,
+      severity: numSeverity,
+      description
+    });
+  }
+
   broadcastState();
 
   res.status(201).json(savedReport);
@@ -273,6 +300,94 @@ function broadcastState() {
   });
 }
 
+// Generate immediate tactical action protocol for high-severity hazards (> 8)
+function getImmediateActionPlan(disaster) {
+  const type = ((disaster.type || disaster.category || '') + ' ' + (disaster.name || disaster.location || '')).toLowerCase();
+  const name = disaster.name || disaster.location || 'Affected Sector';
+
+  if (type.includes('flood') || type.includes('rain') || type.includes('water') || type.includes('precipitation')) {
+    return [
+      `1. MOBILIZE: Deploy NDRF Boat Units to ${name} low-lying river corridors immediately.`,
+      `2. EVACUATE: Issue urgent red-alert evacuation siren for all floodplain residents.`,
+      `3. RELIEF: Dispatch high-capacity water pumps, emergency rations & trauma kits.`
+    ].join('\n');
+  } else if (type.includes('quake') || type.includes('earthquake')) {
+    return [
+      `1. SEARCH & RESCUE: Dispatch NDRF Heavy Urban Search & Rescue battalions to ${name}.`,
+      `2. TRIAGE: Mobilize Trauma Medical Unit Alpha and declare district mass-casualty protocol.`,
+      `3. COMMS & ACCESS: Activate satellite comms link & inspect key arterial bridges.`
+    ].join('\n');
+  } else if (type.includes('cyclone') || type.includes('wind') || type.includes('storm')) {
+    return [
+      `1. SHELTER: Force immediate civilian transfer to reinforced cyclone shelters.`,
+      `2. CLEARING: Pre-position road-clearing JCBs, emergency power generators & tree saws.`,
+      `3. HAZARD CONTROL: Isolate high-tension power grid to prevent electrocution.`
+    ].join('\n');
+  } else if (type.includes('heat') || type.includes('fire')) {
+    return [
+      `1. CONTAINMENT: Mobilize aerial/ground fire retardant units and establish 5km safety perimeter.`,
+      `2. EVACUATION: Evacuate all settlements situated downwind of ${name}.`,
+      `3. MEDICAL: Deploy specialized burn and inhalation trauma triage teams.`
+    ].join('\n');
+  } else if (type.includes('landslide')) {
+    return [
+      `1. CORRIDORS: Seal all arterial hill highways and establish roadblocks into ${name}.`,
+      `2. DEPLOYMENT: Dispatch heavy earthmovers and NDRF canine search teams.`,
+      `3. RELOCATE: Evacuate all unstable slope settlements to designated relief camps.`
+    ].join('\n');
+  } else {
+    return [
+      `1. RAPID MOBILIZATION: Dispatch district quick-reaction disaster team to ${name}.`,
+      `2. CONTAINMENT: Establish outer security perimeter and clear emergency transit lane.`,
+      `3. COMMAND: Convene emergency crisis committee and authorize immediate resource dispatch.`
+    ].join('\n');
+  }
+}
+
+// Function to notify duty officials via SMS and in-app broadcast when disaster severity > 8 is observed
+async function notifyOfficialsOfCriticalDisaster(disaster) {
+  const severityNum = Number(disaster.severity) || (disaster.severity === 'Critical' ? 9 : (disaster.severity === 'High' ? 8.5 : 8.5));
+  if (severityNum <= 8) return;
+
+  const zoneId = disaster.id || `ZONE-${Date.now()}`;
+  if (db.isZoneAlerted(zoneId)) return;
+  db.recordCriticalAlert(zoneId, severityNum);
+
+  const name = disaster.name || disaster.location || 'Critical Sector';
+  const type = disaster.type || disaster.category || 'Disaster Incident';
+  const actionPlan = getImmediateActionPlan(disaster);
+  const appUrl = process.env.APP_URL || 'http://localhost:5173';
+
+  // SDMA Audit log entry
+  const logEvent = `🚨 CRITICAL ALERT (Sev ${severityNum}/10): ${name} (${type}). Immediate action protocol dispatched to duty officers.`;
+  db.addLog(logEvent, 'critical_alert_sent', 'SYSTEM', 'STORM SENTRY');
+
+  // Build tactical SMS for officials
+  const smsBody = `🚨 [STORM SEVERITY ${severityNum}/10 CRITICAL ALERT]\n` +
+    `Sector: ${name}\n` +
+    `Hazard: ${type}\n\n` +
+    `IMMEDIATE ACTIONS REQUIRED:\n${actionPlan}\n\n` +
+    `Authorize Emergency Dispatches: ${appUrl}`;
+
+  const officers = db.getOfficers();
+  for (const off of officers) {
+    if (off.phone) {
+      await sendSMS(off.phone, smsBody);
+    }
+  }
+
+  // Socket broadcast for live dashboard alert
+  io.emit('notification_broadcast', {
+    type: 'CRITICAL_ZONE_ALERT',
+    zoneId: zoneId,
+    zoneName: name,
+    severity: severityNum,
+    disasterType: type,
+    actionPlan: actionPlan,
+    timestamp: new Date().toISOString()
+  });
+}
+
 // Fetch Disaster Feeds (USGS and Open-Meteo) and generate recommendations
 async function fetchDisasterFeeds() {
   try {
@@ -412,33 +527,10 @@ async function fetchDisasterFeeds() {
     if (newZones.length > 0) {
       db.saveZones(newZones);
 
-      // Check for Critical Severity Zones (Severity >= 8) and Auto-Alert Officers
+      // Check for Critical Severity Zones (Severity > 8) and Auto-Alert Officers with Immediate Actions
       for (const zone of newZones) {
-        if (zone.severity >= 8 && !db.isZoneAlerted(zone.id)) {
-          db.recordCriticalAlert(zone.id, zone.severity);
-          
-          const alertEvent = `CRITICAL ALERT: Zone [${zone.name}] reached severity ${zone.severity}/10 (${zone.type}). Auto-notifying all duty officers.`;
-          db.addLog(alertEvent, 'critical_alert_sent', 'SYSTEM', 'STORM SENTRY');
-
-          // Send SMS to all officers
-          const officers = db.getOfficers();
-          const smsBody = `[STORM CRITICAL ALERT] Critical disaster condition detected in ${zone.name} (Severity: ${zone.severity}/10 - ${zone.type}). Log in to STORM Console immediately for tactical review.`;
-          
-          for (const off of officers) {
-            if (off.phone) {
-              sendSMS(off.phone, smsBody);
-            }
-          }
-
-          // Socket in-app alert broadcast
-          io.emit('notification_broadcast', {
-            type: 'CRITICAL_ZONE_ALERT',
-            zoneId: zone.id,
-            zoneName: zone.name,
-            severity: zone.severity,
-            disasterType: zone.type,
-            timestamp: new Date().toISOString()
-          });
+        if (zone.severity > 8) {
+          await notifyOfficialsOfCriticalDisaster(zone);
         }
       }
     }
@@ -477,6 +569,17 @@ io.on('connection', (socket) => {
     activityLog: db.getActivityLog(),
     resources: db.getResources(),
     fieldReports: db.getFieldReports()
+  });
+
+  socket.on('request_state', () => {
+    socket.emit('storm_state_update', {
+      zones: db.getZones(),
+      pendingRecommendations: db.getPendingRecommendations(),
+      approvedRecommendations: db.getApprovedRecommendations(),
+      activityLog: db.getActivityLog(),
+      resources: db.getResources(),
+      fieldReports: db.getFieldReports()
+    });
   });
 
   socket.on('approve_recommendation', (rec) => {

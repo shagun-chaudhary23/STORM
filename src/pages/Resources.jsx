@@ -1,59 +1,25 @@
-import React, { useState, useEffect } from 'react';
-import io from 'socket.io-client';
+import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { 
   Truck, ShieldAlert, HeartPulse, LifeBuoy, Package, 
   MapPin, CheckCircle2, AlertCircle, RefreshCw, Filter, Navigation, KeyRound
 } from 'lucide-react';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-
-const socket = io(API_URL, {
-  auth: { token: localStorage.getItem('storm_officer_token') },
-  reconnection: true,
-  reconnectionAttempts: 5,
-  reconnectionDelay: 1000,
-  reconnectionDelayMax: 5000,
-  randomizationFactor: 0.5,
-  timeout: 5000
-});
-
 export default function Resources() {
-  const { activeOfficer, openLoginModal } = useApp();
+  const { 
+    activeOfficer, 
+    openLoginModal, 
+    resources, 
+    zones: liveZones, 
+    bindResource,
+    refreshState
+  } = useApp();
 
-  const [resources, setResources] = useState([]);
-  const [liveZones, setLiveZones] = useState([]);
   const [filterType, setFilterType] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [selectedResource, setSelectedResource] = useState(null);
   const [assignmentModalOpen, setAssignmentModalOpen] = useState(false);
   const [selectedZone, setSelectedZone] = useState('');
-
-  useEffect(() => {
-    socket.auth = { token: localStorage.getItem('storm_officer_token') };
-
-    const handleStateUpdate = (data) => {
-      if (data) {
-        if (data.resources) {
-          setResources(data.resources);
-        }
-        if (data.zones) {
-          setLiveZones(data.zones);
-        }
-      }
-    };
-
-    socket.on('storm_state_update', handleStateUpdate);
-    socket.on('auth_error', (data) => {
-      alert(`Authorization Error: ${data.message || 'Action denied'}`);
-      openLoginModal();
-    });
-
-    return () => {
-      socket.off('storm_state_update', handleStateUpdate);
-      socket.off('auth_error');
-    };
-  }, [openLoginModal]);
 
   const totalResources = resources.length;
   const availableCount = resources.filter(r => r.status === 'available').length;
@@ -96,24 +62,13 @@ export default function Resources() {
 
     const zoneObj = liveZones.find(z => z.id === selectedZone);
     const zoneName = zoneObj?.name || selectedZone;
-    const token = localStorage.getItem('storm_officer_token');
-
-    const payload = {
+    bindResource({
       resourceId: selectedResource.id,
       targetZoneId: selectedZone,
       targetZoneName: zoneName,
       taskSummary: `Deploy ${selectedResource.name} to ${zoneName}`,
-      severity: zoneObj?.severity || 7,
-      token: token
-    };
-
-    socket.emit('bind_resource', payload);
-
-    setResources(resources.map(r => 
-      (r.id === selectedResource.id || r.name === selectedResource.name)
-        ? { ...r, status: 'deployed', assignedZone: zoneName }
-        : r
-    ));
+      severity: zoneObj?.severity || 7
+    });
 
     setAssignmentModalOpen(false);
     setSelectedResource(null);

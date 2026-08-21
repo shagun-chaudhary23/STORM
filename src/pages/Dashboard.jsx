@@ -1,139 +1,37 @@
-import React, { useState, useEffect } from 'react';
-import io from 'socket.io-client';
+import React from 'react';
 import { useApp } from '../context/AppContext';
 import { 
   ShieldAlert, UserCheck, CheckCircle2, XCircle, Clock, 
   Layers, Truck, ArrowRight, Radio, Bell, RefreshCw, AlertTriangle, Download, Sparkles, KeyRound
 } from 'lucide-react';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-
-const socket = io(API_URL, {
-  auth: { token: localStorage.getItem('storm_officer_token') },
-  reconnection: true,
-  reconnectionAttempts: 5,
-  reconnectionDelay: 1000,
-  reconnectionDelayMax: 5000,
-  randomizationFactor: 0.5,
-  timeout: 5000
-});
-
 export default function Dashboard() {
-  const { activeOfficer, openLoginModal } = useApp();
-
-  const [activeZones, setActiveZones] = useState([]);
-  const [pendingRecs, setPendingRecs] = useState([]);
-  const [approvedRecs, setApprovedRecs] = useState([]);
-  const [liveActivityLog, setLiveActivityLog] = useState([]);
-  const [liveResources, setLiveResources] = useState([]);
-  const [fieldReports, setFieldReports] = useState([]);
-  const [isDisconnected, setIsDisconnected] = useState(!socket.connected);
-  const [inAppAlert, setInAppAlert] = useState(null);
-
-  useEffect(() => {
-    socket.auth = { token: localStorage.getItem('storm_officer_token') };
-
-    const handleConnect = () => {
-      setIsDisconnected(false);
-    };
-
-    const handleDisconnect = (reason) => {
-      console.warn('Socket disconnected:', reason);
-      setIsDisconnected(true);
-    };
-
-    const handleConnectError = (error) => {
-      console.error('Socket connect_error:', error.message);
-      setIsDisconnected(true);
-    };
-
-    const handleReconnect = () => {
-      setIsDisconnected(false);
-    };
-
-    socket.on('connect', handleConnect);
-    socket.on('disconnect', handleDisconnect);
-    socket.on('connect_error', handleConnectError);
-    socket.on('reconnect', handleReconnect);
-
-    socket.on('storm_state_update', (data) => {
-      if (data) {
-        // Audit and warn if any of the five expected keys are missing
-        const expectedKeys = ['zones', 'pendingRecommendations', 'approvedRecommendations', 'activityLog', 'resources'];
-        expectedKeys.forEach(key => {
-          if (data[key] === undefined) {
-            console.warn(`[STORM Warning] storm_state_update payload missing expected key: '${key}'`);
-          }
-        });
-
-        if (data.zones !== undefined) setActiveZones(data.zones);
-        if (data.pendingRecommendations !== undefined) setPendingRecs(data.pendingRecommendations);
-        if (data.approvedRecommendations !== undefined) setApprovedRecs(data.approvedRecommendations);
-        if (data.activityLog !== undefined) setLiveActivityLog(data.activityLog);
-        if (data.resources !== undefined) setLiveResources(data.resources);
-        if (data.fieldReports !== undefined) setFieldReports(data.fieldReports);
-      }
-    });
-
-    socket.on('auth_error', (data) => {
-      alert(`Authorization Error: ${data.message || 'Action denied'}`);
-      openLoginModal();
-    });
-
-    socket.on('notification_broadcast', (alertData) => {
-      if (alertData.type === 'CRITICAL_ZONE_ALERT') {
-        setInAppAlert(alertData);
-        setTimeout(() => setInAppAlert(null), 12000);
-      }
-    });
-
-    if (!socket.connected) {
-      setIsDisconnected(true);
-    }
-
-    return () => {
-      socket.off('connect', handleConnect);
-      socket.off('disconnect', handleDisconnect);
-      socket.off('connect_error', handleConnectError);
-      socket.off('reconnect', handleReconnect);
-      socket.off('storm_state_update');
-      socket.off('auth_error');
-      socket.off('notification_broadcast');
-    };
-  }, [openLoginModal]);
+  const { 
+    activeOfficer, 
+    openLoginModal,
+    zones: activeZones,
+    pendingRecommendations: pendingRecs,
+    approvedRecommendations: approvedRecs,
+    activityLog: liveActivityLog,
+    resources: liveResources,
+    fieldReports,
+    isDisconnected,
+    inAppAlert,
+    dismissInAppAlert,
+    approveRecommendation,
+    rejectRecommendation,
+    refreshState
+  } = useApp();
 
   const activeZonesCount = activeZones.length;
   const availableResourcesCount = liveResources.filter(r => r.status === 'available').length;
 
   const handleApprove = (rec) => {
-    if (!activeOfficer) {
-      openLoginModal();
-      return;
-    }
-
-    const token = localStorage.getItem('storm_officer_token');
-    const payload = {
-      ...rec,
-      officerId: activeOfficer.id,
-      officerName: activeOfficer.name,
-      rank: activeOfficer.rank,
-      token: token
-    };
-
-    socket.emit('approve_recommendation', payload);
-    setPendingRecs(prev => prev.filter(r => r.id !== rec.id));
-    setApprovedRecs(prev => [{ ...payload, status: 'approved', approvedAt: 'Just now', approvedBy: `${activeOfficer.name} (${activeOfficer.rank})` }, ...prev]);
+    approveRecommendation(rec);
   };
 
   const handleReject = (recId) => {
-    if (!activeOfficer) {
-      openLoginModal();
-      return;
-    }
-
-    const token = localStorage.getItem('storm_officer_token');
-    socket.emit('reject_recommendation', { id: recId, token });
-    setPendingRecs(prev => prev.filter(r => r.id !== recId));
+    rejectRecommendation(recId);
   };
 
   const handleExportCSV = () => {
@@ -169,15 +67,25 @@ export default function Dashboard() {
       
       {/* Critical In-App Alert Banner */}
       {inAppAlert && (
-        <div className="bg-red-600 text-white font-mono text-xs px-4 py-3 flex items-center justify-between border-b border-red-400 sticky top-16 z-50 animate-bounce shadow-2xl">
-          <div className="flex items-center gap-2 max-w-4xl truncate">
-            <AlertTriangle className="w-5 h-5 flex-shrink-0 animate-pulse" />
-            <span className="font-bold uppercase tracking-wider">[CRITICAL SENTRY ALERT]</span>
-            <span>{inAppAlert.zoneName} reached Severity {inAppAlert.severity}/10 ({inAppAlert.disasterType}). Immediate tactical response required.</span>
+        <div className="bg-red-600 text-white font-mono text-xs px-4 py-3 flex flex-col md:flex-row items-start md:items-center justify-between border-b border-red-400 sticky top-16 z-50 shadow-2xl gap-2">
+          <div className="flex items-start gap-2 max-w-5xl">
+            <AlertTriangle className="w-5 h-5 flex-shrink-0 animate-pulse text-amber-300 mt-0.5" />
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-bold uppercase tracking-wider bg-red-800 px-1.5 py-0.5 rounded text-[10px]">[CRITICAL SENTRY ALERT]</span>
+                <span className="font-bold">{inAppAlert.zoneName} reached Severity {inAppAlert.severity}/10 ({inAppAlert.disasterType})</span>
+              </div>
+              {inAppAlert.actionPlan && (
+                <div className="text-[11px] text-red-100 mt-1.5 whitespace-pre-line font-sans bg-red-700/60 p-2 rounded border border-red-500/40">
+                  <span className="font-bold text-yellow-300">🚨 IMMEDIATE ACTION PROTOCOL:</span>
+                  <div className="mt-0.5 font-mono">{inAppAlert.actionPlan}</div>
+                </div>
+              )}
+            </div>
           </div>
           <button 
-            onClick={() => setInAppAlert(null)}
-            className="text-white hover:text-red-200 text-xs font-bold underline cursor-pointer"
+            onClick={dismissInAppAlert}
+            className="text-white hover:text-red-200 text-xs font-bold underline cursor-pointer self-end md:self-center"
           >
             Dismiss
           </button>

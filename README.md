@@ -158,9 +158,9 @@ Use any of the following pre-seeded credentials to log in:
 
 | Officer ID | Password | Rank | Contact Phone |
 |---|---|---|---|
-| `OFF-101` | `officer101` | SDMA Relief Commissioner | `+919876543210` |
-| `OFF-102` | `officer102` | NDMA Operations Chief | `+919876543211` |
-| `OFF-103` | `officer103` | NDRF Sector Commander | `+919876543212` |
+| `OFF-101` | `officer101` | SDMA Relief Commissioner | `+919870551588` |
+| `OFF-102` | `officer102` | NDMA Operations Chief | `+919870551588` |
+| `OFF-103` | `officer103` | NDRF Sector Commander | `+919870551588` |
 
 ---
 

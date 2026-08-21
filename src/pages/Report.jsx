@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useApp } from '../context/AppContext';
 import { 
   FileText, Send, CheckCircle2, AlertTriangle, UploadCloud, 
   MapPin, ShieldAlert, Sparkles, Clock, Check, X, Image as ImageIcon, Search, User, Phone, LogOut, ChevronRight, Activity
@@ -7,7 +8,8 @@ import {
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 export default function Report() {
-  const [reports, setReports] = useState([]);
+  const { fieldReports: contextReports } = useApp();
+  const [reports, setReports] = useState(contextReports || []);
   const [location, setLocation] = useState('');
   const [category, setCategory] = useState('Flooding');
   const [description, setDescription] = useState('');
@@ -74,11 +76,15 @@ export default function Report() {
   }, [description]);
 
   useEffect(() => {
-    fetch(`${API_URL}/api/reports`)
-      .then(res => res.json())
-      .then(data => setReports(data))
-      .catch(err => console.error("Error fetching reports", err));
-  }, []);
+    if (contextReports && contextReports.length > 0) {
+      setReports(contextReports);
+    } else {
+      fetch(`${API_URL}/api/reports`)
+        .then(res => res.json())
+        .then(data => setReports(data))
+        .catch(err => console.error("Error fetching reports", err));
+    }
+  }, [contextReports]);
 
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];

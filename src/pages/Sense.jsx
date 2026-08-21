@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import io from 'socket.io-client';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useApp } from '../context/AppContext';
 import { 
   Radio, MapPin, Layers, Filter, Calendar, 
   Activity, CheckCircle2, Clock, Satellite, Waves, ShieldAlert, AlertTriangle, Eye, Flame, CloudRain
@@ -9,15 +9,6 @@ import L from 'leaflet';
 import senseData from '../../sense_data_2026-08-17.json';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-
-const socket = io(API_URL, {
-  reconnection: true,
-  reconnectionAttempts: 5,
-  reconnectionDelay: 1000,
-  reconnectionDelayMax: 5000,
-  randomizationFactor: 0.5,
-  timeout: 5000
-});
 
 // Map Controller for interactive zoom-to-zone
 function MapController({ center, zoom }) {
@@ -53,10 +44,10 @@ const LIVE_DATA_FEEDS = [
     status: "pending",
     coverage: 88,
     lastSync: "Mock sync (Pending gov clearance)",
-    detail: "State disaster alerts and early warnings protocol bridge."
+    detail: "National Disaster Management Authority CAP-compliant emergency broadcast feed."
   },
   {
-    name: "ISRO Bhuvan Inundation Radar",
+    name: "ISRO Bhuvan Synthetic Aperture Radar",
     type: "Illustrative — integration pending",
     status: "pending",
     coverage: 82,
@@ -66,45 +57,35 @@ const LIVE_DATA_FEEDS = [
 ];
 
 export default function Sense() {
-  const [zones, setZones] = useState([]);
+  const { zones } = useApp();
   const [selectedRegion, setSelectedRegion] = useState('All Regions');
   const [selectedZone, setSelectedZone] = useState(null);
   const [mapCenter, setMapCenter] = useState([28.6139, 77.2090]);
   const [mapZoom, setMapZoom] = useState(6);
-  const [earthquakeGeoJSON, setEarthquakeGeoJSON] = useState(null);
 
-  useEffect(() => {
-    socket.on('storm_state_update', (data) => {
-      if (data && data.zones && data.zones.length > 0) {
-        setZones(data.zones);
-        
-        // Convert zones into GeoJSON features for the map
-        const features = data.zones.map((z, idx) => {
-          const lat = z.coordinates ? z.coordinates[0] : (20 + (idx * 2));
-          const lng = z.coordinates ? z.coordinates[1] : (78 + (idx * 1.5));
-          return {
-            type: 'Feature',
-            id: z.id || `zone-${idx}`,
-            properties: {
-              mag: z.severity ? (z.severity > 5 ? z.severity / 1.5 : z.severity) : 4.0,
-              place: z.name,
-              severity: z.severity,
-              type: z.type
-            },
-            geometry: {
-              type: 'Point',
-              coordinates: [lng, lat]
-            }
-          };
-        });
-        setEarthquakeGeoJSON({ type: 'FeatureCollection', features });
-      }
+  // Convert live zones into GeoJSON features immediately
+  const earthquakeGeoJSON = useMemo(() => {
+    if (!zones || zones.length === 0) return null;
+    const features = zones.map((z, idx) => {
+      const lat = z.coordinates ? z.coordinates[0] : (20 + (idx * 2));
+      const lng = z.coordinates ? z.coordinates[1] : (78 + (idx * 1.5));
+      return {
+        type: 'Feature',
+        id: z.id || `zone-${idx}`,
+        properties: {
+          mag: z.severity ? (z.severity > 5 ? z.severity / 1.5 : z.severity) : 4.0,
+          place: z.name,
+          severity: z.severity,
+          type: z.type
+        },
+        geometry: {
+          type: 'Point',
+          coordinates: [lng, lat]
+        }
+      };
     });
-
-    return () => {
-      socket.off('storm_state_update');
-    };
-  }, []);
+    return { type: 'FeatureCollection', features };
+  }, [zones]);
 
   useEffect(() => {
     if (zones.length > 0 && !selectedZone) {
