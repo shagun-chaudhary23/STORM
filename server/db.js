@@ -73,18 +73,9 @@ db.exec(`
 `);
 
 // Initial seed data
-const initialZones = [
-  { id: "Z-4B", name: "Zone 4B – South Sikkim", type: "Earthquake", severity: 8.4, status: "critical", population: 12400, coordinates: JSON.stringify([27.33, 88.62]), activeIncidents: 3 },
-  { id: "Z-2A", name: "Zone 2A – Kalimpong", type: "Earthquake", severity: 6.1, status: "warning", population: 8200, coordinates: JSON.stringify([27.06, 88.47]), activeIncidents: 1 },
-  { id: "Z-7C", name: "Zone 7C – Gangtok Rural", type: "Earthquake", severity: 3.2, status: "stable", population: 15600, coordinates: JSON.stringify([27.33, 88.61]), activeIncidents: 0 },
-  { id: "Z-1D", name: "Zone 1D – Mangan", type: "Earthquake", severity: 7.5, status: "critical", population: 5100, coordinates: JSON.stringify([27.51, 88.53]), activeIncidents: 2 }
-];
+const initialZones = [];
 
-const initialRecommendations = [
-  { id: "REC-001", zone: "Zone 4B – South Sikkim", action: "Dispatch medical team + 200 relief kits", confidence: 91, resourceNeeded: "Medical Team Alpha, 2x Supply Trucks", etaManual: "4-6 hrs", etaAI: "38 min", status: "pending", approvedAt: null, approvedBy: null },
-  { id: "REC-002", zone: "Zone 1D – Mangan", action: "Deploy 1 NDRF boat unit for evacuation support", confidence: 87, resourceNeeded: "NDRF Boat Unit 3", etaManual: "5+ hrs", etaAI: "45 min", status: "pending", approvedAt: null, approvedBy: null },
-  { id: "REC-003", zone: "Zone 2A – Kalimpong", action: "Send early-warning WhatsApp alert to residents", confidence: 95, resourceNeeded: "Alert Broadcast System", etaManual: "2 hrs", etaAI: "4 min", status: "approved", approvedAt: "14 min ago", approvedBy: "Col. Rajesh Sharma (OFF-101)" }
-];
+const initialRecommendations = [];
 
 const initialResources = [
   { id: "RES-1", name: "Medical Team Alpha", type: "medical", status: "available", location: "Gangtok Base", assignedZone: null, quantity: null },
@@ -93,10 +84,7 @@ const initialResources = [
   { id: "RES-4", name: "Medical Team Beta", type: "medical", status: "deployed", location: "Zone 2A", assignedZone: "Zone 2A – Kalimpong", quantity: null }
 ];
 
-const initialFieldReports = [
-  { id: "REP-1", location: "Teesta Riverbank, Sector 3", category: "Flooding", severity: "AI-assessed: High", description: "Water level rising rapidly, two homes affected", timestamp: "18 min ago", verified: 1 },
-  { id: "REP-2", location: "Mangan Market Road", category: "Blocked Access", severity: "AI-assessed: Medium", description: "Landslide debris blocking main relief route", timestamp: "1 hr ago", verified: 0 }
-];
+const initialFieldReports = [];
 
 const initialOfficers = [
   { id: "OFF-101", name: "Col. Rajesh Sharma", rank: "SDMA Relief Commissioner", passwordHash: bcrypt.hashSync("officer101", 10) },
@@ -105,10 +93,7 @@ const initialOfficers = [
 ];
 
 const initialLogs = [
-  { time: "2 min ago", event: "AI flagged Zone 4B as critical (8.4/10)", type: "alert", officerId: "SYSTEM", officerName: "STORM AI", timestamp: new Date(Date.now() - 120000).toISOString() },
-  { time: "14 min ago", event: "Coordinator approved Zone 2A alert dispatch", type: "approval", officerId: "OFF-101", officerName: "Col. Rajesh Sharma", timestamp: new Date(Date.now() - 840000).toISOString() },
-  { time: "22 min ago", event: "NDMA feed synced — 4 zones updated", type: "system", officerId: "SYSTEM", officerName: "Feed Sync", timestamp: new Date(Date.now() - 1320000).toISOString() },
-  { time: "1 hr ago", event: "Field report submitted: Hauz Khas Village Entry, flooding observed", type: "report", officerId: "FIELD-01", officerName: "Ground Observer", timestamp: new Date(Date.now() - 3600000).toISOString() }
+  { time: "Just now", event: "STORM system initialized with real-time feeds", type: "system", officerId: "SYSTEM", officerName: "STORM AI", timestamp: new Date().toISOString() }
 ];
 
 // Seed if empty

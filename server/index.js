@@ -176,13 +176,14 @@ function broadcastState() {
   });
 }
 
-// Fetch Disaster Feeds and generate recommendations
+// Fetch Disaster Feeds (USGS and Open-Meteo) and generate recommendations
 async function fetchDisasterFeeds() {
   try {
-    const response = await axios.get('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson', {
+    // 1. USGS Earthquake Feed
+    const usgsResponse = await axios.get('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson', {
       timeout: 5000
     });
-    let events = response.data.features || [];
+    let events = usgsResponse.data.features || [];
     
     // Filter strictly for India
     events = events.filter(e => e.properties.place && e.properties.place.toLowerCase().includes('india'));
@@ -232,17 +233,98 @@ async function fetchDisasterFeeds() {
           db.addLog(`AI detected critical anomaly in ${zoneName}. Recommendation generated.`, 'alert', 'SYSTEM', 'STORM AI');
         }
       });
-
-      if (newZones.length > 0) {
-        db.saveZones(newZones);
-      }
-
-      if (newRecs.length > 0) {
-        db.addRecommendations(newRecs);
-      }
-
-      broadcastState();
     }
+
+    // 2. Open-Meteo Weather Feed (Major Indian Cities)
+    const cities = [
+      { name: "Mumbai (Coastal)", lat: 19.0760, lon: 72.8777 },
+      { name: "Delhi (NCR)", lat: 28.7041, lon: 77.1025 },
+      { name: "Chennai (Coastal)", lat: 13.0827, lon: 80.2707 },
+      { name: "Guwahati (River Basin)", lat: 26.1445, lon: 91.7362 }
+    ];
+
+    const currentPending = db.getPendingRecommendations();
+    const currentApproved = db.getApprovedRecommendations();
+    const newZones = [];
+    const newRecs = [];
+
+    for (const city of cities) {
+      try {
+        const meteoResponse = await axios.get(`https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lon}&current=temperature_2m,precipitation,wind_speed_10m&timezone=Asia/Kolkata`, {
+          timeout: 5000
+        });
+        
+        const current = meteoResponse.data.current;
+        if (!current) continue;
+
+        let severity = 2;
+        let type = 'Weather';
+        let action = '';
+        let resource = '';
+
+        if (current.precipitation > 15) {
+          severity = current.precipitation > 50 ? 9 : 7;
+          type = 'Severe Flooding';
+          action = `Heavy Rainfall (${current.precipitation}mm) Response`;
+          resource = 'NDRF Boat Unit';
+        } else if (current.temperature_2m > 45) {
+          severity = 8;
+          type = 'Extreme Heatwave';
+          action = `Heatwave Relief (${current.temperature_2m}°C)`;
+          resource = 'Medical Team, Water Tankers';
+        } else if (current.wind_speed_10m > 60) {
+          severity = 8;
+          type = 'Cyclone/High Wind';
+          action = `Cyclone Prep (${current.wind_speed_10m} km/h winds)`;
+          resource = 'Disaster Relief Unit';
+        }
+
+        if (severity >= 7) {
+          const zoneId = `METEO-${city.name.replace(/\s+/g, '')}`;
+          newZones.push({
+            id: zoneId,
+            name: `Alert: ${city.name}`,
+            type: type,
+            severity: severity,
+            population: 1500000,
+            activeIncidents: Math.floor(Math.random() * 5) + 1,
+            status: 'critical',
+            coordinates: [city.lat, city.lon]
+          });
+
+          const recId = `REC-${zoneId}`;
+          const isAlreadyPending = currentPending.some(r => r.id === recId);
+          const isAlreadyApproved = currentApproved.some(r => r.id === recId);
+
+          if (!isAlreadyPending && !isAlreadyApproved) {
+            newRecs.push({
+              id: recId,
+              zone: `Alert: ${city.name}`,
+              action: action,
+              confidence: Math.floor(85 + Math.random() * 10),
+              etaAI: '20 mins',
+              etaManual: '4 hrs',
+              resourceNeeded: resource,
+              status: 'pending'
+            });
+            db.addLog(`AI detected critical weather anomaly in ${city.name} via Open-Meteo.`, 'alert', 'SYSTEM', 'STORM AI');
+          }
+        }
+      } catch (e) {
+        console.error(`Open-Meteo fetch failed for ${city.name}:`, e.message);
+      }
+    }
+
+    if (newZones.length > 0) {
+      db.saveZones(newZones);
+    }
+    if (newRecs.length > 0) {
+      db.addRecommendations(newRecs);
+    }
+    
+    // Only broadcast if we found anything (USGS or Open-Meteo)
+    broadcastState();
+
   } catch (error) {
     console.error('Error fetching disaster feeds:', error.message);
   }

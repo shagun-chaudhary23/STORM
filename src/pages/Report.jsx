@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { fieldReports as initialReports } from '../data/mockData';
+
 import { 
   FileText, Send, CheckCircle2, AlertTriangle, UploadCloud, 
   MapPin, ShieldAlert, Sparkles, Clock, Check, X, Image as ImageIcon, Search

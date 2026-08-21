@@ -372,17 +372,17 @@ export default function Dashboard() {
             <div className="p-5 rounded-2xl bg-[#141414] border border-white/10 space-y-3">
               <span className="text-xs font-bold text-white block">Active Data Feeds</span>
               <div className="text-xs text-[#9A9A9A] space-y-2">
-                <div className="flex justify-between">
-                  <span>NDMA API Stream</span>
-                  <span className="text-emerald-400 font-mono">96% Coverage</span>
+                <div className="flex justify-between items-center">
+                  <span>USGS Earthquake Feed</span>
+                  <span className="px-2 py-0.5 bg-emerald-950/50 text-emerald-400 font-mono text-[10px] rounded-md border border-emerald-500/30">Live Sync</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>IMD Doppler Radar</span>
-                  <span className="text-emerald-400 font-mono">94% Coverage</span>
+                <div className="flex justify-between items-center">
+                  <span>Open-Meteo Weather API</span>
+                  <span className="px-2 py-0.5 bg-emerald-950/50 text-emerald-400 font-mono text-[10px] rounded-md border border-emerald-500/30">Live Sync</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>ISRO Satellite</span>
-                  <span className="text-emerald-400 font-mono">88% Coverage</span>
+                <div className="flex justify-between items-center">
+                  <span>GDACS Global Disaster</span>
+                  <span className="px-2 py-0.5 bg-amber-950/50 text-amber-400 font-mono text-[10px] rounded-md border border-amber-500/30">Delayed</span>
                 </div>
               </div>
             </div>

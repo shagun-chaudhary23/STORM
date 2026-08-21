@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import io from 'socket.io-client';
-import { zones, recommendations, resources } from '../data/mockData';
+import { zones as initialZones, recommendations as initialRecs, resources as initialRes } from '../data/mockData';
 import { 
   Cpu, ArrowRight, UserCheck, ShieldCheck, Clock, 
   Sparkles, AlertCircle, CheckCircle2, Sliders, ChevronRight, Fingerprint, Activity, Loader2, KeyRound, LogOut
@@ -21,13 +21,36 @@ const socket = io(API_URL, {
 
 
 export default function Reason() {
-  const [selectedZoneId, setSelectedZoneId] = useState(zones[0].id);
-  const [selectedResourceName, setSelectedResourceName] = useState(resources[0].name);
+  const [activeZones, setActiveZones] = useState(initialZones);
+  const [activeResources, setActiveResources] = useState(initialRes);
+  const [activeRecommendations, setActiveRecommendations] = useState(initialRecs);
+
+  const [selectedZoneId, setSelectedZoneId] = useState('');
+  const [selectedResourceName, setSelectedResourceName] = useState('');
   const [analyzed, setAnalyzed] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [showAuthModal, setShowAuthModal] = useState(false);
   const [isApproved, setIsApproved] = useState(false);
   const [liveRecommendation, setLiveRecommendation] = useState(null);
+
+  useEffect(() => {
+    socket.on('storm_state_update', (data) => {
+      setActiveZones(data.zones || []);
+      setActiveResources(data.resources || []);
+      setActiveRecommendations([...(data.pendingRecommendations || []), ...(data.approvedRecommendations || [])]);
+      
+      // Auto-select first available items if nothing selected
+      if (!selectedZoneId && data.zones?.length > 0) {
+        setSelectedZoneId(data.zones[0].id);
+      }
+      if (!selectedResourceName && data.resources?.length > 0) {
+        setSelectedResourceName(data.resources[0].name);
+      }
+    });
+
+    return () => {
+      socket.off('storm_state_update');
+    };
+  }, [selectedZoneId, selectedResourceName]);
 
   // Officer authentication state
   const [activeOfficer, setActiveOfficer] = useState(() => {
@@ -40,9 +63,9 @@ export default function Reason() {
   });
 
   // Match recommendation for selected zone or fallback to first
-  const currentRec = liveRecommendation || (recommendations.find(r => r.zone === selectedZoneId) || recommendations[0]);
-  const currentZone = zones.find(z => z.id === selectedZoneId) || zones[0];
-  const selectedResource = resources.find(r => r.name === selectedResourceName) || resources[0];
+  const currentRec = liveRecommendation || (activeRecommendations.find(r => r.zone === selectedZoneId) || activeRecommendations[0] || {});
+  const currentZone = activeZones.find(z => z.id === selectedZoneId) || activeZones[0] || {};
+  const selectedResource = activeResources.find(r => r.name === selectedResourceName) || activeResources[0] || {};
 
   const handleAnalyze = async (e) => {
     e.preventDefault();
@@ -174,14 +197,14 @@ export default function Reason() {
                   onChange={(e) => setSelectedZoneId(e.target.value)}
                   className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl p-3.5 text-xs text-white focus:outline-none focus:border-[#FF6B1A]"
                 >
-                  {zones.map((zone) => (
+                  {activeZones.map((zone) => (
                     <option key={zone.id} value={zone.id}>
-                      {zone.name} (Severity: {zone.severity}/10 – {zone.status.toUpperCase()})
+                      {zone.name} (Severity: {zone.severity}/10 – {zone.status?.toUpperCase()})
                     </option>
                   ))}
                 </select>
                 <span className="text-[10px] text-[#9A9A9A] block font-mono">
-                  Current population: {currentZone.population.toLocaleString()} • Active incidents: {currentZone.activeIncidents}
+                  Current population: {currentZone?.population?.toLocaleString() || 0} • Active incidents: {currentZone?.activeIncidents || 0}
                 </span>
               </div>
 
@@ -195,9 +218,9 @@ export default function Reason() {
                   onChange={(e) => setSelectedResourceName(e.target.value)}
                   className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl p-3.5 text-xs text-white focus:outline-none focus:border-[#FF6B1A]"
                 >
-                  {resources.map((res, idx) => (
+                  {activeResources.map((res, idx) => (
                     <option key={idx} value={res.name}>
-                      {res.name} — {res.location} ({res.status.toUpperCase()})
+                      {res.name} — {res.location} ({res.status?.toUpperCase()})
                     </option>
                   ))}
                 </select>
@@ -211,7 +234,7 @@ export default function Reason() {
             <div className="flex justify-center pt-2">
               <button
                 type="submit"
-                disabled={isAnalyzing}
+                disabled={isAnalyzing || !currentZone.id || !selectedResource.name}
                 className={`w-56 py-3.5 px-6 text-xs uppercase tracking-wider font-extrabold text-white rounded-full shadow-lg transition-all cursor-pointer inline-flex items-center justify-center gap-2 ${
                   isAnalyzing 
                     ? 'bg-slate-700 cursor-not-allowed' 
