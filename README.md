@@ -1,422 +1,145 @@
-# STORM
+# STORM (Situational Tracking and Operational Response Management)
 
-## Situational Tracking and Operational Response Management
+STORM is an advanced, real-time disaster coordination prototype designed to transform chaotic field signals and public data into a unified, actionable operational picture. 
 
-STORM is a disaster-coordination prototype for turning field and public data into a shared operational picture. It combines a React/Vite interface, a Node.js/Express service, SQLite persistence, Socket.IO live updates, Leaflet maps, and optional Google Gemini recommendations.
+By replacing fragmented paper trails and manual phone trees with a centralized **Socket.IO-powered real-time event pipeline**, STORM accelerates crisis response. It integrates live global telemetry, AI-assisted dispatch planning (via Google Gemini), and a strict human-in-the-loop governance model.
 
-The product demonstrates a human-governed workflow:
+> **The Core Operational Loop:**
+> **Sense** (Live API Ingestion) ➔ **Reason** (AI Spatial Optimization) ➔ **Human Review** (Officer Authentication) ➔ **Act** (Resource Deployment) ➔ **Communicate** (Real-time Broadcast)
+
+---
+
+## 🌟 Key Features
+
+### 📡 1. Live Global Data Telemetry
+STORM no longer relies on mock datasets. The backend engine continuously polls live, open-source APIs to generate incidents dynamically:
+- **USGS Earthquake Feed:** Polls globally every 30 seconds, automatically flagging seismic events within South Asia and translating magnitudes into severity zones.
+- **Open-Meteo Weather Integration:** Monitors major Indian coordinates (Delhi, Mumbai, Chennai, Guwahati). Automatically triggers `Extreme Heatwave` or `Severe Flooding` incident zones based on real-time precipitation and temperature thresholds.
+
+### 🧠 2. The Reason Layer (AI Spatial Optimization)
+When a live disaster is detected, STORM connects to the **Google Gemini Engine** to instantly draft a deployment recommendation. The AI evaluates incident severity against available NDRF and medical resources to provide an optimized dispatch plan, complete with confidence scores and ETAs.
+
+### 🛡️ 3. Secure Human Governance & Auth
+STORM enforces strict operational security. The prototype features a fully global, JWT-backed authentication flow:
+- **Protected Routing:** Operational modules (Dashboard, Reason, Resources, Sense) are inaccessible without a valid officer session.
+- **Bcrypt & JWT:** Officer credentials are cryptographically hashed via `bcrypt`, and sessions are maintained via signed JSON Web Tokens (JWT).
+- **Audit Trails:** No AI recommendation is executed without an authenticated officer authorizing the dispatch.
+
+### 🔄 4. Real-Time Resource & Field Sync
+Using **Socket.IO**, the platform synchronizes state instantly across all connected terminals:
+- **End-to-End Field Reports:** Ground observers can submit reports via the `/report` intake portal. These are persisted to the SQLite database and instantly broadcasted to all coordinator dashboards.
+- **Resource Binding:** When a medical team or NDRF boat unit is assigned to a zone, global inventory counts update immediately across the network.
+
+---
+
+## 🛠️ Technology Stack
+
+**Frontend Architecture:**
+- **React 18** (Vite 6 Build System)
+- **Tailwind CSS 4** (Utility-first styling, custom dark-mode disaster aesthetics)
+- **React Router 6** (Protected nested routing)
+- **Leaflet & React-Leaflet** (Geospatial mapping)
+- **Socket.IO-Client** (Real-time bi-directional event syncing)
+
+**Backend Architecture:**
+- **Node.js + Express 5**
+- **Socket.IO** (Websocket broadcasting)
+- **Better-SQLite3** (High-performance, synchronous SQLite persistence)
+- **Bcrypt & JSONWebToken** (Security & Auth)
+- **Google GenAI SDK** (Gemini LLM integration)
+- **Axios** (Live data polling)
+
+---
+
+## 📂 Repository Layout
 
 ```text
-Sense -> Reason -> Human Review -> Act -> Communicate
-```
-
-The repository is a working demo rather than a production emergency-response system. Several integrations are simulated or local-only; the limitations are listed near the end of this document.
-
-## What It Provides
-
-- A public-facing overview of the STORM coordination model.
-- A tactical dashboard with zones, recommendations, resources, approvals, and an activity log.
-- Live USGS earthquake polling filtered for locations containing `India`.
-- A Sense map with earthquake, weather, route, and data-source views.
-- Gemini-assisted dispatch recommendations that require an officer review step.
-- Resource assignment to operational zones.
-- Field-report intake with local severity assessment and verification controls.
-- A standalone coordinator simulator for demonstrating the approval workflow without a backend.
-- SQLite-backed demo state that is created and seeded automatically on server startup.
-
-## Technology Stack
-
-### Frontend
-
-- React 18
-- Vite 6
-- React Router 6
-- Tailwind CSS 4
-- Leaflet and React Leaflet
-- Lucide React icons
-- Socket.IO client
-
-### Backend
-
-- Node.js with CommonJS modules
-- Express 5
-- Socket.IO
-- Axios
-- `better-sqlite3`
-- Google GenAI SDK
-- `dotenv`
-
-## Repository Layout
-
-```text
-.
-├── index.html                 Vite HTML entry point
-├── package.json               Frontend dependencies and scripts
-├── vite.config.js             Vite and React configuration
-├── tailwind.config.js         Tailwind configuration
-├── .env.example               Environment variable template
-├── collect_sense_data.js      Creates the static Sense data snapshot
-├── sense_data_2026-08-17.json Static Sense snapshot imported by the app
-├── setup_project_folder.bat   Machine-specific Windows setup utility
+STORM/
 ├── server/
-│   ├── index.js               Express, Socket.IO, Gemini, and USGS service
-│   ├── db.js                  SQLite schema, seed data, and database functions
-│   ├── package.json            Backend dependencies
-│   └── package-lock.json       Locked backend dependency versions
-└── src/
-    ├── App.jsx                Route registration and shared page shell
-    ├── main.jsx               React bootstrap
-    ├── index.css              Global styles and Tailwind imports
-    ├── components/            Shared and presentation components
-    ├── data/                  Static demo and presentation data
-    └── pages/                 Route-level screens
+│   ├── index.js               # Express Server, Socket.IO config, Live Polling (USGS/Open-Meteo)
+│   ├── db.js                  # SQLite Schema, Data persistence, Seed generation, Auth logic
+│   ├── package.json           # Backend dependencies
+│   └── .env                   # API Keys (Gemini, JWT Secret, Port config)
+├── src/
+│   ├── App.jsx                # Global Router & ProtectedRoute wrappers
+│   ├── components/            # Reusable UI (Navbar, Footer, ProtectedRoute, etc.)
+│   ├── pages/                 
+│   │   ├── Dashboard.jsx      # Command Center (Listens to live socket updates)
+│   │   ├── Reason.jsx         # AI Dispatch planning interface
+│   │   ├── Resources.jsx      # Asset inventory and deployment portal
+│   │   ├── Sense.jsx          # Geospatial Map visualization
+│   │   ├── Report.jsx         # Ground intelligence intake form
+│   │   ├── Login.jsx          # JWT Authentication portal
+│   │   └── Home.jsx           # Public-facing mission landing page
+│   └── data/                  
+│       └── mockData.js        # Deprecated/Trimmed static assets (Case studies)
+├── index.html                 # Vite HTML entry
+├── vite.config.js             # Vite configuration
+└── tailwind.config.js         # Tailwind configuration
 ```
 
-The server creates `server/storm.db` and SQLite WAL files when it starts. These files are runtime state and are intentionally ignored by Git.
+---
 
-## Requirements
+## 🚀 Getting Started
 
-- Node.js 18 or newer is recommended.
-- npm.
-- Internet access for the USGS feed, map tiles, weather and route services, and Gemini when AI analysis is used.
-- A build environment compatible with `better-sqlite3`.
-- A Google Gemini API key for the `/api/analyze` feature.
+### Prerequisites
+- Node.js (v18+)
+- A **Google Gemini API Key** (Required for the AI Reason layer)
 
-## Installation
-
-Install frontend dependencies from the project root:
-
-```bash
-npm install
-```
-
-Install backend dependencies:
-
+### 1. Backend Setup
 ```bash
 cd server
 npm install
-cd ..
 ```
-
-Create a local environment file from the template:
-
-```bash
-copy .env.example .env
-```
-
-On macOS or Linux, use `cp .env.example .env` instead. Set `GEMINI_API_KEY` in `.env` before using AI analysis.
-
-Example configuration:
-
+Create an `.env` file in the `server/` directory:
 ```env
-VITE_API_URL=http://localhost:3001
 PORT=3001
+VITE_API_URL=http://localhost:3001
 GEMINI_API_KEY=your_gemini_api_key_here
+JWT_SECRET=super_secret_jwt_key_change_in_production
 ```
-
-`VITE_API_URL` is exposed to the browser by Vite, so it must not contain secrets. `PORT` controls the backend HTTP and Socket.IO server. `GEMINI_API_KEY` is read only by the backend.
-
-## Running Locally
-
-Run the frontend in one terminal from the project root:
-
+Start the backend engine:
 ```bash
-npm run dev
-```
-
-The Vite development server is normally available at `http://localhost:3000`.
-
-Run the backend in a second terminal. From the project root:
-
-```bash
-node server/index.js
-```
-
-Or from the server directory:
-
-```bash
-cd server
 node index.js
 ```
+*(The backend will automatically create the `storm.db` SQLite database, seed initial NDRF resources and Officer accounts, and immediately begin polling live data feeds).*
 
-When starting from `server`, `dotenv` looks for `.env` in the current working directory. In that case, put a server-specific `.env` inside `server/`, or start the service from the project root so the root `.env` is found.
-
-The backend listens on port `3001` by default and creates/seeds `server/storm.db` automatically.
-
-## Available Commands
-
-### Frontend commands
-
+### 2. Frontend Setup
+Open a new terminal window at the project root:
 ```bash
-npm run dev       # Start the Vite development server
-npm run build     # Create a production build in dist/
-npm run preview   # Preview the production build locally
+npm install
+npm run dev
 ```
+Navigate to `http://localhost:3000`.
 
-### Sense data collection
+---
 
-```bash
-node collect_sense_data.js
-```
+## 🔑 Demo Officer Accounts
 
-This writes a static snapshot to `sense_data_2026-08-17.json`. The script uses a fixed historical output name and date range. It fetches USGS earthquake data, Open-Meteo weather data for eight Indian cities, HeiGIT/OQAPI data, and an optional OpenRouteService isochrone. `ORS_API_KEY` is optional and is used only by this script.
+To access the operational dashboard and authorize AI deployments, you must log in. The database is seeded with the following securely hashed demo accounts:
 
-The backend package currently has no production start script. Its `npm test` command is a placeholder that exits with an error; start the backend with `node server/index.js`.
-
-## Frontend Routes
-
-Routes are registered in `src/App.jsx`. There is currently no catch-all route or custom 404 screen.
-
-| Route | Screen | Behavior |
+| Officer ID | Password | Rank |
 |---|---|---|
-| `/` | Home | Presents the STORM mission, disaster-coordination problem, a highest-severity zone view, pending approvals, and links into the operational workflow. |
-| `/dashboard` | Dashboard | Connects to Socket.IO and displays live zones, pending and approved recommendations, activity, resources, connection state, and CSV export. |
-| `/resources` | Resources | Lists resources and active zones, supports filtering, and emits a resource-binding event to deploy an asset. |
-| `/sense` | Sense | Displays telemetry and data-source status on a Leaflet map, including static snapshot data, earthquake information, weather, zone filters, and an optional route overlay. |
-| `/reason` | Reason | Selects a zone and resource, requests a Gemini recommendation, loads demo officers, authenticates an officer, and sends an approval through Socket.IO. |
-| `/report` | Report | Accepts a local field report, derives a keyword-based severity, simulates evidence attachment, verifies reports locally, and shows an incident stream. |
-| `/how-it-works` | How It Works | Explains the Sense, Reason, Human Review, Act, and Communicate stages, governance rules, and response-time comparison. |
-| `/about` | About | Shows the mission, users, deployment phases, and a local-only pilot inquiry form at `/about#contact`. |
-| `/roadmap` | Roadmap | Shows the planned deployment timeline from prototype to wider rollout. |
-| `/simulator` | Coordinator Simulator | Runs a self-contained local simulation where an operator selects an incident, edits or approves/rejects a plan, and views a local audit log. |
+| `OFF-101` | `officer101` | SDMA Relief Commissioner |
+| `OFF-102` | `officer102` | NDMA Operations Chief |
+| `OFF-103` | `officer103` | NDRF Sector Commander |
 
-### Shared navigation and components
+---
 
-`Navbar` provides navigation, the mobile menu, pilot navigation, and the browser-side officer-session indicator. `Footer` is shared by most public pages and is omitted on the dashboard. `CoordinatorSimulator` is a complete local workflow used by the simulator route.
+## ⚙️ Data Flow & Architecture Notes
 
-The repository also contains reusable presentation components such as `Hero`, `Problem`, `Solution`, `Architecture`, `DataTrust`, `Impact`, `Roadmap`, `ContactFooter`, `PrivacyModal`, and `BottomDock`. These support the original product presentation but are not all mounted by the current routed pages.
+1. **The Polling Engine:** `server/index.js` runs a continuous `setInterval`. It fetches data from `earthquake.usgs.gov` and `api.open-meteo.com`. If thresholds are crossed (e.g., Temp > 28°C or Precip > 10mm), it converts these into `zones`.
+2. **Database Persistence:** Valid incidents, approved deployments, and field reports are saved via `better-sqlite3` to `storm.db` (WAL mode enabled for concurrent writes).
+3. **The Broadcast:** Immediately after polling or when an officer makes a decision, the server calls `io.emit('storm_state_update')`.
+4. **The UI Hydration:** Every protected page (Dashboard, Resources, Reason) listens to the socket stream. When a payload arrives, React state is overwritten, providing a true real-time, zero-refresh experience.
 
-## How the Application Works
+---
 
-### 1. Sense
+## 🛑 Production Hardening Checklist
 
-The Sense page starts with the checked-in static JSON snapshot so the interface can render without waiting for external services. It visualizes earthquake GeoJSON and related telemetry on a Leaflet map. The collection script can refresh the snapshot, but the filename and date are currently fixed.
-
-The backend independently polls the USGS daily magnitude 2.5+ GeoJSON feed every 30 seconds. It keeps events whose place text contains `india`, converts magnitude to a 0-10 severity score, creates or updates zones, and broadcasts the resulting state to connected dashboard clients.
-
-Severity mapping in the backend:
-
-- Magnitude `>= 6.0`: severity `10`
-- Magnitude `>= 4.5`: severity `7`
-- Magnitude `>= 3.0`: severity `5`
-- Otherwise: severity `3`
-
-### 2. Reason
-
-The Reason page sends a selected zone and available resource to `POST /api/analyze`. The backend passes that context to Gemini and requests a strict JSON recommendation containing an action, AI/manual ETAs, confidence, resource needed, and key factors.
-
-The generated response is returned to the browser with a generated ID and target zone. The server does not automatically dispatch it. An officer must sign in and approve it through the human-review step.
-
-### 3. Human Review
-
-The frontend loads seeded demo officers from `GET /api/officers`, then sends credentials to `POST /api/login`. A successful login stores the officer session in browser `localStorage` and records a login event in SQLite.
-
-The approval control emits `approve_recommendation` with recommendation and officer information. The backend persists or updates the recommendation, records the approval event, and broadcasts a fresh state payload.
-
-### 4. Act
-
-The Resources page emits `bind_resource` with a resource ID and target zone. The backend updates the resource assignment and logs the deployment. Dashboard, Resources, and other connected clients receive the updated state through `storm_state_update`.
-
-Recommendations can also be rejected through `reject_recommendation`. Rejection is persisted as a recommendation status and added to the activity log.
-
-### 5. Communicate
-
-The Dashboard renders the shared operational state and activity history. It can export the visible dashboard state as CSV. Field reports and pilot inquiries currently communicate only within the browser; they are not sent to the backend.
-
-## Backend HTTP API
-
-The default base URL is `http://localhost:3001`.
-
-### `POST /api/login`
-
-Authenticates one of the seeded demo officers.
-
-Request:
-
-```json
-{
-  "officerId": "OFF-101",
-  "password": "officer101"
-}
-```
-
-Responses:
-
-- `200`: `{ "success": true, "officer": { ... } }`
-- `400`: officer ID or password is missing.
-- `401`: credentials are invalid.
-
-### `GET /api/officers`
-
-Returns the seeded officers without password fields. This endpoint exists for the demo officer selector.
-
-### `POST /api/analyze`
-
-Requests a Gemini dispatch recommendation.
-
-Request:
-
-```json
-{
-  "zone": {
-    "id": "Z-4B",
-    "name": "Zone 4B - South Sikkim",
-    "severity": 8.4
-  },
-  "resource": {
-    "name": "Medical Team Alpha",
-    "status": "available"
-  }
-}
-```
-
-A successful response contains `action`, `etaAI`, `etaManual`, `confidence`, `resourceNeeded`, `keyFactors`, a generated `id`, and `zone`. The endpoint returns `400` when `GEMINI_API_KEY` is missing and `500` when Gemini or response parsing fails.
-
-## Socket.IO Protocol
-
-The frontend connects to the backend URL from `VITE_API_URL`, defaulting to `http://localhost:3001`.
-
-### Server event: `storm_state_update`
-
-The server emits this event when a client connects, a user logs in, a recommendation changes, a resource is bound, or a USGS feed refresh succeeds.
-
-```json
-{
-  "zones": [],
-  "pendingRecommendations": [],
-  "approvedRecommendations": [],
-  "activityLog": [],
-  "resources": []
-}
-```
-
-### Client event: `approve_recommendation`
-
-Sends a recommendation for approval. Optional officer fields include `officerId`, `officerName`, and `rank`. The server persists the recommendation and writes an approval log entry.
-
-### Client event: `reject_recommendation`
-
-Accepts a recommendation ID or an object containing `id` or `recommendationId`. The server changes the recommendation status and writes a rejection log entry.
-
-### Client event: `bind_resource`
-
-Deploys an available resource to a zone.
-
-```json
-{
-  "resourceId": "RES-1",
-  "targetZoneId": "Z-4B",
-  "targetZoneName": "Zone 4B - South Sikkim",
-  "officerId": "OFF-101",
-  "officerName": "Col. Rajesh Sharma"
-}
-```
-
-The server also handles the standard Socket.IO `connection` and `disconnect` lifecycle events.
-
-## SQLite Database
-
-`server/db.js` opens `server/storm.db`, enables WAL mode, creates missing tables, and seeds each empty table with demonstration data. The database is created on demand and is not part of source control.
-
-### Tables
-
-- `zones`: ID, name, disaster type, severity, status, population, active incidents, and serialized coordinates.
-- `recommendations`: Dispatch action, confidence, required resource, AI/manual ETAs, status, approval time, and approving officer.
-- `resources`: Name, type, availability, location, assigned zone, and quantity.
-- `field_reports`: Location, category, severity, description, timestamp, and verification flag.
-- `activity_log`: Event ID, display time, event text, event type, officer identity, and timestamp.
-- `officers`: Officer ID, name, rank, and the current demo password value.
-
-### Database functions
-
-The server uses these functions from `server/db.js`:
-
-- `getZones()` and `saveZones(zones)` read and upsert operational zones.
-- `getRecommendations()` reads all recommendations.
-- `getPendingRecommendations()` and `getApprovedRecommendations()` provide dashboard subsets.
-- `addRecommendations(recommendations)` inserts recommendations from the feed.
-- `approveRecommendation(recommendation, officer)` persists a human approval.
-- `rejectRecommendation(id)` changes a recommendation to rejected.
-- `getResources()` reads resource inventory.
-- `bindResource(resourceId, zoneId, zoneName)` assigns a resource.
-- `getActivityLog()` reads recent operational events.
-- `addLog(event, type, officerId, officerName)` records an event.
-- `getOfficers()` returns safe officer records for the frontend.
-- `authenticateOfficer(id, password)` checks the seeded demo credentials.
-
-## Seeded Demo Officers
-
-| ID | Password | Name | Role |
-|---|---|---|---|
-| `OFF-101` | `officer101` | Col. Rajesh Sharma | SDMA Relief Commissioner |
-| `OFF-102` | `officer102` | Dr. Ananya Sen | NDMA Operations Chief |
-| `OFF-103` | `officer103` | Capt. Vikram Malhotra | NDRF Sector Commander |
-
-These credentials are for demonstration only and must be replaced by a real identity and access system before deployment.
-
-## Static Data
-
-`src/data/mockData.js` contains frontend fallback data for zones, recommendations, resources, activity logs, reports, data-source cards, and the Sikkim case study. Several public screens use this data directly.
-
-`src/data/stormData.js` contains presentation data for architecture, problem and solution sections, mock disaster events, dashboard statistics, case studies, and roadmap content.
-
-`sense_data_2026-08-17.json` contains the imported Sense snapshot: USGS earthquake GeoJSON, Open-Meteo responses for eight Indian cities, HeiGIT/OQAPI output, and optional OpenRouteService data.
-
-## Data Flow Summary
-
-```mermaid
-flowchart LR
-    A[USGS feed] --> B[server/index.js]
-    B --> C[server/db.js]
-    C --> D[SQLite storm.db]
-    B --> E[Socket.IO storm_state_update]
-    E --> F[Dashboard and Resources]
-    G[Zone and resource selection] --> H[POST /api/analyze]
-    H --> I[Google Gemini]
-    I --> J[Human officer review]
-    J --> E
-    K[sense_data JSON] --> L[Sense page]
-    M[collect_sense_data.js] --> K
-```
-
-## Known Limitations
-
-- Frontend and backend run as separate processes.
-- The backend has no `npm start` script; use `node server/index.js`.
-- Static fallback data allows parts of the frontend to render without the backend, but live state, login, approval, resource deployment, and Gemini analysis require the backend.
-- The backend currently polls only USGS earthquake data. UI references to NDMA, IMD, ISRO, CWC, and social feeds are presentation content, not implemented backend integrations.
-- USGS events are filtered only when the place string contains `india`; population values for live zones are simulated.
-- Field reports are held in React state and are not persisted to the SQLite `field_reports` table.
-- Evidence attachment in the Report page is simulated; no file is uploaded.
-- The About pilot form is local-only and does not send email or call an API.
-- The standalone simulator does not use Socket.IO or SQLite.
-- Officer passwords are seeded and stored as plaintext despite the `passwordHash` column name.
-- There are no session tokens, authorization middleware, rate limiting, or persistent server-side authentication sessions.
-- CORS and Socket.IO origins are open to all origins for demo use.
-- The privacy presentation refers to immutable cryptographic audit logging, while the current implementation stores ordinary SQLite records and timestamps.
-- The Sense snapshot and collector use a fixed historical filename/date and can become stale.
-- The server depends on external USGS availability and starts its 30-second polling interval immediately.
-- There is no route-level error boundary or unknown-route page.
-
-## Production Hardening Checklist
-
-Before using STORM outside a demo environment:
-
-- Hash passwords with a modern password-hashing algorithm and add real identity management.
-- Add session or token authentication, authorization checks, CSRF protection where applicable, and rate limiting.
-- Restrict CORS and Socket.IO origins to trusted frontend hosts.
-- Move secrets to a managed secret store and never expose them through Vite client variables.
-- Validate and sanitize all API and Socket.IO payloads.
-- Add durable field-report and evidence storage with access controls.
-- Replace simulated population, report evidence, and feed integrations with verified sources.
-- Add structured logging, monitoring, backups, migrations, and operational alerting.
-- Add automated unit, integration, and end-to-end tests.
-- Add a real error page and recovery states for unavailable external services.
-
-## Windows Utility Note
-
-`setup_project_folder.bat` is specific to the original local machine layout. It changes permissions and copies files from `C:\Users\Projects\lumina\Storm`; it is not required for normal installation and should not be used as a portable deployment script.
-
-## License
-
-No project license is currently declared in the repository. Confirm the intended license before distributing the project.
+While STORM is a highly advanced prototype, several steps are required before deploying it to a real crisis environment:
+- **Replace JWT Secret:** Use a secure, injected environment variable for `JWT_SECRET`.
+- **Rate Limiting:** Implement Express rate limiters on `/api/login` and `/api/reports` to prevent DDoS or brute-force attacks.
+- **CORS Policies:** Restrict Socket.IO and Express CORS origins to the specific production domains.
+- **Storage Buckets:** Implement AWS S3 or Google Cloud Storage for real file/evidence attachment in the Field Reports portal (currently simulated).
+- **Scale Database:** Migrate from SQLite to PostgreSQL for multi-instance horizontal scaling.
