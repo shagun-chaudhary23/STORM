@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
+import { AppProvider } from './context/AppContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 
@@ -13,6 +14,7 @@ import Report from './pages/Report';
 import HowItWorks from './pages/HowItWorks';
 import About from './pages/About';
 import Login from './pages/Login';
+import Respond from './pages/Respond';
 import ProtectedRoute from './components/ProtectedRoute';
 
 // Scroll to top helper on route change
@@ -33,16 +35,17 @@ function ScrollToTop() {
   return null;
 }
 
-export default function App() {
+function MainLayout() {
   const location = useLocation();
   const isDashboard = location.pathname === '/dashboard';
+  const isRespond = location.pathname.startsWith('/respond/');
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] text-slate-100 font-sans selection:bg-[#FF6B1A]/30 selection:text-[#FF6B1A] relative flex flex-col justify-between">
+    <div className="min-h-screen font-sans selection:bg-[#FF6B1A]/30 selection:text-[#FF6B1A] relative flex flex-col justify-between transition-colors duration-200">
       <ScrollToTop />
 
-      {/* Sticky top nav on all pages */}
-      <Navbar />
+      {/* Sticky top nav with Theme toggle and Official Login (hidden on respond page for distraction-free briefing) */}
+      {!isRespond && <Navbar />}
 
       {/* Main Routed Content */}
       <main className="flex-grow">
@@ -51,6 +54,7 @@ export default function App() {
           <Route path="/how-it-works" element={<HowItWorks />} />
           <Route path="/about" element={<About />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/respond/:token" element={<Respond />} />
           
           <Route element={<ProtectedRoute />}>
             <Route path="/dashboard" element={<Dashboard />} />
@@ -62,8 +66,16 @@ export default function App() {
         </Routes>
       </main>
 
-      {/* Shared Footer on all pages EXCEPT Dashboard */}
-      {!isDashboard && <Footer />}
+      {/* Shared Footer on all pages EXCEPT Dashboard and Respond */}
+      {!isDashboard && !isRespond && <Footer />}
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AppProvider>
+      <MainLayout />
+    </AppProvider>
   );
 }

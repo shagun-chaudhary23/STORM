@@ -90,7 +90,7 @@ export default function Home() {
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                <span className="text-slate-300 font-medium">Live NDMA Feed</span>
+                <span className="text-slate-300 font-medium">Live USGS & Weather Telemetry</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-[#FF6B1A]" />

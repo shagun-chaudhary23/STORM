@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { 
   Building, Users, ShieldCheck, Send, CheckCircle2, 
-  MapPin, Flag, Compass, Clock, Lock, Sparkles 
+  MapPin, Flag, Compass, Clock, Lock, Sparkles, Loader2, AlertCircle
 } from 'lucide-react';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 export default function About() {
   const [formData, setFormData] = useState({
@@ -12,6 +14,8 @@ export default function About() {
     message: ''
   });
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState(null);
 
   const roadmapPhases = [
     {
@@ -26,7 +30,7 @@ export default function About() {
       title: "Live Data Integration",
       status: "In Progress",
       period: "Q3 - Q4 2024",
-      desc: "Direct integration of IMD Doppler radar feeds, NDMA Sachet API connectors, and automated WhatsApp alert templating."
+      desc: "Direct integration of USGS seismic feeds, Open-Meteo weather radar, and automated briefing notification pipelines."
     },
     {
       phase: "Phase 3",
@@ -44,13 +48,33 @@ export default function About() {
     }
   ];
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitted(true);
+    setLoading(true);
+    setErrorMsg(null);
+
+    try {
+      const res = await fetch(`${API_URL}/api/inquiries`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || 'Failed to submit inquiry');
+      }
+
+      setSubmitted(true);
+    } catch (err) {
+      setErrorMsg(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="relative pt-28 pb-20 overflow-hidden">
+    <div className="relative pt-28 pb-20 overflow-hidden min-h-screen">
       
       {/* Glow Arc */}
       <div className="hero-glow-arc-subtle"></div>
@@ -158,19 +182,26 @@ export default function About() {
           {submitted ? (
             <div className="p-8 text-center space-y-4 bg-emerald-950/40 border border-emerald-500/30 rounded-xl">
               <CheckCircle2 className="w-10 h-10 text-emerald-400 mx-auto" />
-              <h3 className="text-lg font-bold text-white">Pilot Inquiry Received</h3>
+              <h3 className="text-lg font-bold text-white">Pilot Inquiry Persisted to Command Desk</h3>
               <p className="text-xs text-slate-300">
-                Thank you, <strong>{formData.name}</strong> ({formData.organization}). We will coordinate with your disaster response cell shortly.
+                Thank you, <strong>{formData.name}</strong> ({formData.organization}). Your request has been logged in our deployment database.
               </p>
               <button
                 onClick={() => setSubmitted(false)}
-                className="w-40 py-2.5 bg-white/10 text-xs font-bold text-white rounded-full hover:bg-white/20 transition-colors"
+                className="w-44 py-2.5 bg-white/10 text-xs font-bold text-white rounded-full hover:bg-white/20 transition-colors cursor-pointer"
               >
                 Send Another Note
               </button>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
+              {errorMsg && (
+                <div className="p-3 rounded-xl bg-red-950/60 border border-red-500/30 text-xs text-red-300 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <span>{errorMsg}</span>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="block text-xs font-bold text-slate-300">Name *</label>
@@ -227,10 +258,11 @@ export default function About() {
               <div className="pt-2">
                 <button
                   type="submit"
-                  className="w-48 py-3.5 px-6 bg-gradient-to-r from-[#FF6B1A] to-[#E8391A] hover:opacity-95 text-white font-extrabold uppercase tracking-wider text-xs rounded-full shadow-lg shadow-[#FF6B1A]/20 transition-all cursor-pointer flex items-center justify-center gap-2"
+                  disabled={loading}
+                  className="w-48 py-3.5 px-6 bg-gradient-to-r from-[#FF6B1A] to-[#E8391A] hover:opacity-95 text-white font-extrabold uppercase tracking-wider text-xs rounded-full shadow-lg shadow-[#FF6B1A]/20 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-60"
                 >
-                  <Send className="w-3.5 h-3.5" />
-                  <span>Submit Inquiry</span>
+                  {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                  <span>{loading ? 'Submitting...' : 'Submit Inquiry'}</span>
                 </button>
               </div>
             </form>

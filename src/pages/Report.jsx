@@ -1,21 +1,55 @@
-import React, { useState, useEffect } from 'react';
-
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   FileText, Send, CheckCircle2, AlertTriangle, UploadCloud, 
-  MapPin, ShieldAlert, Sparkles, Clock, Check, X, Image as ImageIcon, Search
+  MapPin, ShieldAlert, Sparkles, Clock, Check, X, Image as ImageIcon, Search, User, Phone, LogOut, ChevronRight, Activity
 } from 'lucide-react';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 export default function Report() {
   const [reports, setReports] = useState([]);
   const [location, setLocation] = useState('');
   const [category, setCategory] = useState('Flooding');
   const [description, setDescription] = useState('');
-  const [fileAttached, setFileAttached] = useState(false); // TODO: real file upload, see production hardening checklist
+  const [attachedFile, setAttachedFile] = useState(null);
+  const [filePreview, setFilePreview] = useState(null);
   const [submittedMessage, setSubmittedMessage] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [activeReport, setActiveReport] = useState(null); // For verification modal
+  const [activeReport, setActiveReport] = useState(null);
   const [isTyping, setIsTyping] = useState(false);
+
+  const fileInputRef = useRef(null);
+
+  // Lightweight Reporter Identity (stored in localStorage)
+  const [reporter, setReporter] = useState(() => {
+    try {
+      const saved = localStorage.getItem('storm_reporter');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const [reporterNameInput, setReporterNameInput] = useState('');
+  const [reporterPhoneInput, setReporterPhoneInput] = useState('');
+
+  const handleReporterLogin = (e) => {
+    e.preventDefault();
+    if (!reporterNameInput.trim() || !reporterPhoneInput.trim()) return;
+
+    const rep = {
+      name: reporterNameInput.trim(),
+      phone: reporterPhoneInput.trim()
+    };
+    localStorage.setItem('storm_reporter', JSON.stringify(rep));
+    setReporter(rep);
+  };
+
+  const handleReporterLogout = () => {
+    localStorage.removeItem('storm_reporter');
+    setReporter(null);
+  };
 
   // Auto-computed AI severity based on description length/keywords
   const computeAiSeverity = () => {
@@ -35,33 +69,65 @@ export default function Report() {
   // Simulate typing delay for AI Assessment
   useEffect(() => {
     setIsTyping(true);
-    const timeout = setTimeout(() => setIsTyping(false), 500);
+    const timeout = setTimeout(() => setIsTyping(false), 400);
     return () => clearTimeout(timeout);
   }, [description]);
 
   useEffect(() => {
-    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/reports`)
+    fetch(`${API_URL}/api/reports`)
       .then(res => res.json())
       .then(data => setReports(data))
       .catch(err => console.error("Error fetching reports", err));
   }, []);
 
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setAttachedFile({
+      name: file.name,
+      size: (file.size / 1024 / 1024).toFixed(2) + ' MB',
+      type: file.type
+    });
+
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (ev) => setFilePreview(ev.target.result);
+      reader.readAsDataURL(file);
+    } else {
+      setFilePreview(null);
+    }
+  };
+
+  const removeFile = (e) => {
+    e.stopPropagation();
+    setAttachedFile(null);
+    setFilePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!reporter) {
+      setErrorMsg('Please register your observer credentials below before submitting.');
+      return;
+    }
     if (!location || !description) return;
 
     setErrorMsg(null);
     setLoading(true);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/reports`, {
+      const response = await fetch(`${API_URL}/api/reports`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           location,
           category,
           severity: aiSeverity ? aiSeverity.label.split(': ')[1] : 'Medium',
-          description
+          description,
+          reporterName: reporter.name,
+          reporterPhone: reporter.phone
         })
       });
 
@@ -74,7 +140,10 @@ export default function Report() {
       setReports([savedReport, ...reports]);
       setLocation('');
       setDescription('');
-      setFileAttached(false);
+      setAttachedFile(null);
+      setFilePreview(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      
       setSubmittedMessage(true);
       setTimeout(() => setSubmittedMessage(false), 5000);
     } catch (err) {
@@ -111,14 +180,82 @@ export default function Report() {
           <p className="text-sm sm:text-base text-[#9A9A9A] leading-relaxed">
             Submit on-ground observations for automated NLP verification and zone severity recalibration by the Reason Layer.
           </p>
+
+          {/* Reporter Status Bar */}
+          <div className="pt-2">
+            {reporter ? (
+              <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full bg-emerald-950/40 border border-emerald-500/30 text-xs font-mono">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span className="text-slate-300">Registered Reporter:</span>
+                <strong className="text-emerald-400">{reporter.name}</strong>
+                <span className="text-slate-500 font-normal">({reporter.phone})</span>
+                <button
+                  onClick={handleReporterLogout}
+                  className="text-slate-400 hover:text-red-400 transition-colors ml-1 p-0.5 cursor-pointer"
+                  title="Sign out reporter"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : (
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-950/40 border border-amber-500/30 text-xs font-mono text-amber-400">
+                <User className="w-3.5 h-3.5" />
+                <span>Reporter Identification Required to Submit Reports</span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Two-Column Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           
           {/* Left Column: Incident Report Form */}
-          <div className="lg:col-span-7">
-            <div className="p-6 sm:p-8 rounded-2xl bg-[#141414] border border-white/10 shadow-2xl space-y-6">
+          <div className="lg:col-span-7 space-y-6">
+
+            {/* Reporter Registration Box if Logged Out */}
+            {!reporter && (
+              <div className="p-6 rounded-2xl bg-[#141414] border border-amber-500/30 shadow-xl space-y-4">
+                <div className="flex items-center gap-2">
+                  <User className="w-4 h-4 text-[#FF6B1A]" />
+                  <h3 className="text-sm font-bold text-white uppercase tracking-wider">Field Reporter Registration</h3>
+                </div>
+                <p className="text-xs text-[#9A9A9A]">
+                  Enter your name and contact phone number. All submitted reports will be stamped with your field ID for SDMA auditability.
+                </p>
+                <form onSubmit={handleReporterLogin} className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  <div>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Your Full Name"
+                      value={reporterNameInput}
+                      onChange={(e) => setReporterNameInput(e.target.value)}
+                      className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-[#FF6B1A]"
+                    />
+                  </div>
+                  <div>
+                    <input
+                      type="tel"
+                      required
+                      placeholder="Contact Phone Number"
+                      value={reporterPhoneInput}
+                      onChange={(e) => setReporterPhoneInput(e.target.value)}
+                      className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-[#FF6B1A]"
+                    />
+                  </div>
+                  <div className="sm:col-span-2 flex justify-end">
+                    <button
+                      type="submit"
+                      className="py-2.5 px-5 text-xs font-bold text-white bg-gradient-to-r from-[#FF6B1A] to-[#E8391A] rounded-full shadow cursor-pointer hover:opacity-90"
+                    >
+                      Confirm Reporter Identity
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            <div className={`p-6 sm:p-8 rounded-2xl bg-[#141414] border border-white/10 shadow-2xl space-y-6 transition-opacity ${!reporter ? 'opacity-70' : ''}`}>
               
               <div className="flex items-center justify-between pb-4 border-b border-white/10">
                 <div className="flex items-center gap-2">
@@ -132,8 +269,8 @@ export default function Report() {
                 <div className="p-4 rounded-xl bg-emerald-950/40 border border-emerald-500/40 flex items-center gap-3 text-xs text-emerald-300 animate-in fade-in slide-in-from-top-2">
                   <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0" />
                   <div>
-                    <strong className="block text-white text-sm">Report Successfully Ingested</strong>
-                    Incident logged and queued for SDMA spatial deduplication.
+                    <strong className="block text-white text-sm">Report Successfully Ingested & Persisted</strong>
+                    Incident saved to database and queued for spatial deduplication.
                   </div>
                 </div>
               )}
@@ -142,7 +279,7 @@ export default function Report() {
                 <div className="p-4 rounded-xl bg-red-950/40 border border-red-500/40 flex items-center gap-3 text-xs text-red-300 animate-in fade-in slide-in-from-top-2">
                   <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0" />
                   <div>
-                    <strong className="block text-white text-sm">Submission Failed</strong>
+                    <strong className="block text-white text-sm">Submission Error</strong>
                     {errorMsg}
                   </div>
                 </div>
@@ -160,10 +297,11 @@ export default function Report() {
                     <input
                       type="text"
                       required
+                      disabled={!reporter}
                       placeholder="e.g. Teesta Bridge Sector 4, Singtam"
                       value={location}
                       onChange={(e) => setLocation(e.target.value)}
-                      className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl py-3 pl-10 pr-4 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-[#FF6B1A] transition-colors"
+                      className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl py-3 pl-10 pr-4 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-[#FF6B1A] transition-colors disabled:cursor-not-allowed"
                     />
                   </div>
                 </div>
@@ -175,8 +313,9 @@ export default function Report() {
                   </label>
                   <select
                     value={category}
+                    disabled={!reporter}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-[#FF6B1A] transition-colors"
+                    className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-[#FF6B1A] transition-colors disabled:cursor-not-allowed"
                   >
                     <option value="Flooding">Flash Flooding / Inundation</option>
                     <option value="Blocked Access">Landslide / Blocked Access Route</option>
@@ -213,43 +352,70 @@ export default function Report() {
                   <textarea
                     rows={4}
                     required
+                    disabled={!reporter}
                     placeholder="Describe water surge speed, trapped count, road blockage details..."
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl p-3 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-[#FF6B1A] transition-colors"
+                    className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl p-3 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-[#FF6B1A] transition-colors disabled:cursor-not-allowed"
                   />
                 </div>
 
-                {/* Optional Photo / Document Upload field */}
+                {/* Working Photo / Document Upload field */}
                 <div className="space-y-1.5">
                   <label className="block text-xs font-bold text-slate-300">
                     Attach Field Evidence (Optional)
                   </label>
+                  
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*,.pdf"
+                    className="hidden"
+                    onChange={handleFileChange}
+                  />
+
                   <div 
-                    onClick={() => setFileAttached(!fileAttached)}
+                    onClick={() => {
+                      if (reporter && fileInputRef.current) fileInputRef.current.click();
+                    }}
                     className={`border border-dashed rounded-xl p-4 text-center cursor-pointer transition-all duration-300 ${
-                      fileAttached ? 'border-emerald-500/50 bg-emerald-950/20' : 'border-white/10 hover:border-[#FF6B1A]/40 bg-[#0A0A0A]'
+                      attachedFile 
+                        ? 'border-emerald-500/50 bg-emerald-950/20' 
+                        : 'border-white/10 hover:border-[#FF6B1A]/40 bg-[#0A0A0A]'
                     }`}
                   >
-                    {fileAttached ? (
-                      <div className="flex flex-col items-center gap-2">
-                        <div className="w-16 h-16 rounded-lg bg-black/50 border border-emerald-500/30 flex items-center justify-center overflow-hidden relative group">
-                          <ImageIcon className="w-8 h-8 text-emerald-500/50" />
-                          <div className="absolute inset-0 bg-emerald-400/10 group-hover:bg-emerald-400/20 transition-colors"></div>
+                    {attachedFile ? (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          {filePreview ? (
+                            <img src={filePreview} alt="Evidence Preview" className="w-12 h-12 object-cover rounded-lg border border-emerald-500/30" />
+                          ) : (
+                            <div className="w-12 h-12 rounded-lg bg-black/50 border border-emerald-500/30 flex items-center justify-center">
+                              <ImageIcon className="w-6 h-6 text-emerald-400" />
+                            </div>
+                          )}
+                          <div className="text-left">
+                            <span className="text-xs text-emerald-400 font-medium block truncate max-w-xs">{attachedFile.name}</span>
+                            <span className="text-[10px] text-slate-400 font-mono">{attachedFile.size}</span>
+                          </div>
                         </div>
-                        <span className="text-xs text-emerald-400 font-medium flex items-center gap-1">
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          field_recon_img_01.jpg (2.4MB)
-                        </span>
+                        <button
+                          type="button"
+                          onClick={removeFile}
+                          className="p-1 text-slate-400 hover:text-red-400 transition-colors"
+                          title="Remove attached file"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
                       </div>
                     ) : (
                       <>
                         <UploadCloud className="w-6 h-6 mx-auto mb-2 text-[#9A9A9A]" />
                         <span className="text-xs text-slate-300 block font-medium">
-                          Click to attach geotagged photograph / radar snapshot
+                          Click to select and attach geotagged photograph / document
                         </span>
                         <span className="text-[10px] text-slate-500 font-mono block mt-1">
-                          JPG, PNG, PDF up to 10MB
+                          PNG, JPG, PDF up to 10MB (Local client preview)
                         </span>
                       </>
                     )}
@@ -260,11 +426,11 @@ export default function Report() {
                 <div className="pt-4 border-t border-white/10 flex justify-end">
                   <button
                     type="submit"
-                    disabled={loading}
-                    className="w-full sm:w-48 py-3.5 px-6 text-xs uppercase tracking-wider font-extrabold text-white bg-gradient-to-r from-[#FF6B1A] to-[#E8391A] hover:opacity-95 rounded-full shadow-lg shadow-[#FF6B1A]/20 hover:scale-[1.02] transition-all cursor-pointer inline-flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={loading || !reporter}
+                    className="w-full sm:w-56 py-3.5 px-6 text-xs uppercase tracking-wider font-extrabold text-white bg-gradient-to-r from-[#FF6B1A] to-[#E8391A] hover:opacity-95 rounded-full shadow-lg shadow-[#FF6B1A]/20 hover:scale-[1.02] transition-all cursor-pointer inline-flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Send className="w-3.5 h-3.5" />
-                    <span>{loading ? 'Submitting...' : 'Submit Report'}</span>
+                    <span>{loading ? 'Persisting...' : (reporter ? 'Submit Field Report' : 'Register to Submit')}</span>
                   </button>
                 </div>
 
@@ -277,7 +443,7 @@ export default function Report() {
             <div className="flex items-center justify-between">
               <h2 className="text-base font-bold text-white flex items-center gap-2">
                 <Activity className="w-4 h-4 text-emerald-400" />
-                Live Incident Stream
+                Live Incident Stream (SQLite Synced)
               </h2>
               <span className="text-xs font-mono text-[#9A9A9A] bg-white/5 px-2 py-1 rounded-md">{reports.length} Reports</span>
             </div>
@@ -311,8 +477,8 @@ export default function Report() {
                       {report.category}
                     </span>
                     <span className={`font-semibold ${
-                      report.severity.toLowerCase().includes('high') ? 'text-red-400' : 
-                      report.severity.toLowerCase().includes('medium') ? 'text-[#FF6B1A]' : 'text-emerald-400'
+                      String(report.severity || '').toLowerCase().includes('high') ? 'text-red-400' : 
+                      String(report.severity || '').toLowerCase().includes('medium') ? 'text-[#FF6B1A]' : 'text-emerald-400'
                     }`}>
                       Sev: {report.severity}
                     </span>
@@ -324,7 +490,9 @@ export default function Report() {
 
                   <div className="pt-3 mt-3 border-t border-white/5 flex items-center justify-between text-[10px] text-slate-500 font-mono">
                     <span className="flex items-center gap-1"><Clock className="w-3 h-3"/> {report.timestamp}</span>
-                    <span className="flex items-center gap-1">View Details <ChevronRight className="w-3 h-3" /></span>
+                    <span className="flex items-center gap-1">
+                      {report.reporter_name ? `By: ${report.reporter_name}` : 'Details'} <ChevronRight className="w-3 h-3" />
+                    </span>
                   </div>
                 </div>
               ))}
@@ -344,7 +512,7 @@ export default function Report() {
                 <Search className="w-4 h-4 text-[#FF6B1A]" />
                 Incident Inspection
               </div>
-              <button onClick={() => setActiveReport(null)} className="text-slate-400 hover:text-white transition-colors">
+              <button onClick={() => setActiveReport(null)} className="text-slate-400 hover:text-white transition-colors cursor-pointer">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -358,6 +526,12 @@ export default function Report() {
                   <span className="text-slate-400">ID: #{activeReport.id}</span>
                   <span className="text-slate-600">•</span>
                   <span className="text-slate-400">Reported: {activeReport.timestamp}</span>
+                  {activeReport.reporter_name && (
+                    <>
+                      <span className="text-slate-600">•</span>
+                      <span className="text-emerald-400 font-semibold">{activeReport.reporter_name}</span>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -369,8 +543,8 @@ export default function Report() {
                 <div className="p-3 bg-[#0A0A0A] rounded-xl border border-white/5 space-y-1">
                   <span className="text-[10px] font-mono text-slate-500 uppercase block">AI Assessed Severity</span>
                   <span className={`text-sm font-semibold ${
-                      activeReport.severity.toLowerCase().includes('high') ? 'text-red-400' : 
-                      activeReport.severity.toLowerCase().includes('medium') ? 'text-amber-400' : 'text-emerald-400'
+                      String(activeReport.severity || '').toLowerCase().includes('high') ? 'text-red-400' : 
+                      String(activeReport.severity || '').toLowerCase().includes('medium') ? 'text-amber-400' : 'text-emerald-400'
                     }`}>
                     {activeReport.severity}
                   </span>
@@ -388,13 +562,13 @@ export default function Report() {
                 <div className="pt-4 border-t border-white/10 flex gap-3">
                   <button
                     onClick={() => setActiveReport(null)}
-                    className="flex-1 py-3 text-xs font-bold text-slate-300 bg-white/5 hover:bg-white/10 rounded-xl transition-all"
+                    className="flex-1 py-3 text-xs font-bold text-slate-300 bg-white/5 hover:bg-white/10 rounded-xl transition-all cursor-pointer"
                   >
                     Close
                   </button>
                   <button
                     onClick={() => handleVerify(activeReport.id)}
-                    className="flex-1 py-3 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2"
+                    className="flex-1 py-3 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <CheckCircle2 className="w-4 h-4" />
                     Mark as Verified
@@ -413,44 +587,5 @@ export default function Report() {
       )}
 
     </div>
-  );
-}
-
-// Missing icon fallback for imports
-function ChevronRight(props) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="m9 18 6-6-6-6" />
-    </svg>
-  );
-}
-
-function Activity(props) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
-    </svg>
   );
 }

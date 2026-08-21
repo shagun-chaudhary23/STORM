@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import io from 'socket.io-client';
-import { zones as initialZones, recommendations as initialRecs, resources as initialRes } from '../data/mockData';
+import { useApp } from '../context/AppContext';
 import { 
   Cpu, ArrowRight, UserCheck, ShieldCheck, Clock, 
   Sparkles, AlertCircle, CheckCircle2, Sliders, ChevronRight, Fingerprint, Activity, Loader2, KeyRound, LogOut
@@ -18,12 +18,12 @@ const socket = io(API_URL, {
   timeout: 5000
 });
 
-
-
 export default function Reason() {
-  const [activeZones, setActiveZones] = useState(initialZones);
-  const [activeResources, setActiveResources] = useState(initialRes);
-  const [activeRecommendations, setActiveRecommendations] = useState(initialRecs);
+  const { activeOfficer, logoutOfficer, openLoginModal } = useApp();
+
+  const [activeZones, setActiveZones] = useState([]);
+  const [activeResources, setActiveResources] = useState([]);
+  const [activeRecommendations, setActiveRecommendations] = useState([]);
 
   const [selectedZoneId, setSelectedZoneId] = useState('');
   const [selectedResourceName, setSelectedResourceName] = useState('');
@@ -33,42 +33,52 @@ export default function Reason() {
   const [liveRecommendation, setLiveRecommendation] = useState(null);
 
   useEffect(() => {
+    // Keep socket token in sync with localStorage
+    socket.auth = { token: localStorage.getItem('storm_officer_token') };
+
     socket.on('storm_state_update', (data) => {
-      setActiveZones(data.zones || []);
-      setActiveResources(data.resources || []);
-      setActiveRecommendations([...(data.pendingRecommendations || []), ...(data.approvedRecommendations || [])]);
-      
-      // Auto-select first available items if nothing selected
-      if (!selectedZoneId && data.zones?.length > 0) {
-        setSelectedZoneId(data.zones[0].id);
+      if (data) {
+        if (data.zones) {
+          setActiveZones(data.zones);
+          if (!selectedZoneId && data.zones.length > 0) {
+            setSelectedZoneId(data.zones[0].id);
+          }
+        }
+        if (data.resources) {
+          setActiveResources(data.resources);
+          if (!selectedResourceName && data.resources.length > 0) {
+            setSelectedResourceName(data.resources[0].name);
+          }
+        }
+        if (data.pendingRecommendations || data.approvedRecommendations) {
+          setActiveRecommendations([
+            ...(data.pendingRecommendations || []), 
+            ...(data.approvedRecommendations || [])
+          ]);
+        }
       }
-      if (!selectedResourceName && data.resources?.length > 0) {
-        setSelectedResourceName(data.resources[0].name);
-      }
+    });
+
+    socket.on('auth_error', (data) => {
+      alert(`Authentication Error: ${data.message || 'Action rejected by security gateway.'}`);
+      openLoginModal();
     });
 
     return () => {
       socket.off('storm_state_update');
+      socket.off('auth_error');
     };
-  }, [selectedZoneId, selectedResourceName]);
-
-  // Officer authentication state
-  const [activeOfficer, setActiveOfficer] = useState(() => {
-    try {
-      const saved = localStorage.getItem('storm_officer');
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
-  });
+  }, [selectedZoneId, selectedResourceName, openLoginModal]);
 
   // Match recommendation for selected zone or fallback to first
-  const currentRec = liveRecommendation || (activeRecommendations.find(r => r.zone === selectedZoneId) || activeRecommendations[0] || {});
-  const currentZone = activeZones.find(z => z.id === selectedZoneId) || activeZones[0] || {};
-  const selectedResource = activeResources.find(r => r.name === selectedResourceName) || activeResources[0] || {};
+  const currentZone = activeZones.find(z => z.id === selectedZoneId) || activeZones[0] || null;
+  const selectedResource = activeResources.find(r => r.name === selectedResourceName) || activeResources[0] || null;
+  const currentRec = liveRecommendation || (activeRecommendations.find(r => r.zone === currentZone?.name || r.zone === selectedZoneId) || activeRecommendations[0] || {});
 
   const handleAnalyze = async (e) => {
     e.preventDefault();
+    if (!currentZone || !selectedResource) return;
+
     setIsAnalyzing(true);
     setAnalyzed(false);
     setIsApproved(false);
@@ -99,33 +109,30 @@ export default function Reason() {
   };
 
   const handleApprove = () => {
-    if (!activeOfficer) return;
+    if (!activeOfficer) {
+      openLoginModal();
+      return;
+    }
 
+    const token = localStorage.getItem('storm_officer_token');
     const recPayload = {
       id: currentRec.id || `REC-AI-${Date.now()}`,
       recommendationId: currentRec.id || `REC-AI-${Date.now()}`,
-      zone: currentZone.name,
-      action: currentRec.action,
-      resourceNeeded: selectedResource.name,
+      zone: currentZone?.name || 'Target Zone',
+      action: currentRec.action || `Deploy ${selectedResource?.name} to ${currentZone?.name}`,
+      resourceNeeded: selectedResource?.name || 'Emergency Relief Unit',
       etaAI: currentRec.etaAI || '15 mins',
       etaManual: currentRec.etaManual || '3 hrs',
       confidence: currentRec.confidence || 90,
       officerId: activeOfficer.id,
       officerName: activeOfficer.name,
       rank: activeOfficer.rank,
+      token: token,
       timestamp: new Date().toISOString()
     };
 
     socket.emit('approve_recommendation', recPayload);
     setIsApproved(true);
-  };
-
-  const handleOfficerLogout = () => {
-    setActiveOfficer(null);
-    localStorage.removeItem('storm_officer');
-    localStorage.removeItem('storm_officer_token');
-    socket.auth = {};
-    socket.disconnect().connect();
   };
 
   return (
@@ -161,18 +168,21 @@ export default function Reason() {
                 <span className="text-slate-500">|</span>
                 <span className="text-slate-400">{activeOfficer.rank}</span>
                 <button
-                  onClick={handleOfficerLogout}
-                  className="text-slate-400 hover:text-red-400 transition-colors ml-1 p-0.5"
+                  onClick={logoutOfficer}
+                  className="text-slate-400 hover:text-red-400 transition-colors ml-1 p-0.5 cursor-pointer"
                   title="Sign out officer"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                 </button>
               </div>
             ) : (
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-950/40 border border-amber-500/30 text-xs font-mono text-amber-400">
+              <button
+                onClick={openLoginModal}
+                className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-950/40 border border-amber-500/30 text-xs font-mono text-amber-400 hover:bg-amber-950/70 transition-colors cursor-pointer"
+              >
                 <KeyRound className="w-3.5 h-3.5" />
-                <span>No Officer Session • Authentication Required for Dispatch</span>
-              </div>
+                <span>No Officer Session • Click to Authenticate for Dispatch</span>
+              </button>
             )}
           </div>
         </div>
@@ -182,7 +192,7 @@ export default function Reason() {
           <form onSubmit={handleAnalyze} className="space-y-6">
             <div className="flex items-center gap-2 text-xs font-mono font-bold text-[#FF6B1A] uppercase tracking-wider">
               <Sliders className="w-4 h-4" />
-              <span>Simulate Dispatch Logic for Incident Sector</span>
+              <span>Simulate Dispatch Logic for Live Incident Sectors</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -190,26 +200,28 @@ export default function Reason() {
               {/* Input 1: Incident Zone Dropdown */}
               <div className="space-y-2">
                 <label className="block text-xs font-bold text-slate-300">
-                  Select Incident Zone
+                  Select Incident Zone (Live Sense Feeds)
                 </label>
                 <select
                   value={selectedZoneId}
                   onChange={(e) => setSelectedZoneId(e.target.value)}
-                  className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl p-3.5 text-xs text-white focus:outline-none focus:border-[#FF6B1A]"
+                  className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl p-3.5 text-xs text-white focus:outline-none focus:border-[#FF6B1A] disabled:opacity-50"
                   disabled={activeZones.length === 0}
                 >
                   {activeZones.length > 0 ? (
                     activeZones.map((zone) => (
                       <option key={zone.id} value={zone.id}>
-                        {zone.name} (Severity: {zone.severity}/10 – {zone.status?.toUpperCase()})
+                        {zone.name} (Severity: {zone.severity}/10 – {zone.status?.toUpperCase() || 'ACTIVE'})
                       </option>
                     ))
                   ) : (
-                    <option value="">No Active Incident Zones Detected</option>
+                    <option value="">No active zones detected</option>
                   )}
                 </select>
                 <span className="text-[10px] text-[#9A9A9A] block font-mono">
-                  Current population: {currentZone?.population?.toLocaleString() || 0} • Active incidents: {currentZone?.activeIncidents || 0}
+                  {currentZone 
+                    ? `Estimated population: ${Number(currentZone.population || 0).toLocaleString()} • Active incidents: ${currentZone.activeIncidents || 1}`
+                    : 'Awaiting real-time telemetry from Sense layer...'}
                 </span>
               </div>
 
@@ -222,12 +234,17 @@ export default function Reason() {
                   value={selectedResourceName}
                   onChange={(e) => setSelectedResourceName(e.target.value)}
                   className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl p-3.5 text-xs text-white focus:outline-none focus:border-[#FF6B1A]"
+                  disabled={activeResources.length === 0}
                 >
-                  {activeResources.map((res, idx) => (
-                    <option key={idx} value={res.name}>
-                      {res.name} — {res.location} ({res.status?.toUpperCase()})
-                    </option>
-                  ))}
+                  {activeResources.length > 0 ? (
+                    activeResources.map((res, idx) => (
+                      <option key={idx} value={res.name}>
+                        {res.name} — {res.location} ({res.status?.toUpperCase() || 'AVAILABLE'})
+                      </option>
+                    ))
+                  ) : (
+                    <option value="">No resources registered</option>
+                  )}
                 </select>
                 <span className="text-[10px] text-[#9A9A9A] block font-mono">
                   Inventory status synced across state warehouses
@@ -239,10 +256,10 @@ export default function Reason() {
             <div className="flex justify-center pt-2">
               <button
                 type="submit"
-                disabled={isAnalyzing || !currentZone.id || !selectedResource.name}
+                disabled={isAnalyzing || !currentZone || !selectedResource}
                 className={`w-56 py-3.5 px-6 text-xs uppercase tracking-wider font-extrabold text-white rounded-full shadow-lg transition-all cursor-pointer inline-flex items-center justify-center gap-2 ${
-                  isAnalyzing 
-                    ? 'bg-slate-700 cursor-not-allowed' 
+                  isAnalyzing || !currentZone || !selectedResource
+                    ? 'bg-slate-700 cursor-not-allowed opacity-60' 
                     : 'bg-gradient-to-r from-[#FF6B1A] to-[#E8391A] hover:opacity-95 shadow-[#FF6B1A]/20 hover:scale-[1.02]'
                 }`}
               >
@@ -267,12 +284,12 @@ export default function Reason() {
           <div className="max-w-3xl mx-auto p-12 text-center space-y-4 animate-pulse">
             <Activity className="w-10 h-10 text-[#FF6B1A] mx-auto animate-bounce" />
             <h3 className="text-lg font-bold text-white">Running Multi-Constraint Spatial Models...</h3>
-            <p className="text-xs text-[#9A9A9A] font-mono">Evaluating {selectedResource.name} deployment to {currentZone.name}</p>
+            <p className="text-xs text-[#9A9A9A] font-mono">Evaluating {selectedResource?.name} deployment to {currentZone?.name}</p>
           </div>
         )}
 
         {/* Side-by-Side Comparison: AI Recommendation vs Manual Baseline */}
-        {analyzed && !isAnalyzing && (
+        {analyzed && !isAnalyzing && currentZone && selectedResource && (
           <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               
@@ -288,7 +305,7 @@ export default function Reason() {
                   </div>
 
                   <span className="px-3 py-1 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-500/30 text-xs font-mono font-bold">
-                    {currentRec.confidence}% Confidence
+                    {currentRec.confidence || 90}% Confidence
                   </span>
                 </div>
 
@@ -306,12 +323,12 @@ export default function Reason() {
 
                 <div className="p-4 rounded-xl bg-black/40 border border-emerald-500/20 flex items-center justify-between text-xs font-mono">
                   <span className="text-[#9A9A9A]">Target Response ETA:</span>
-                  <span className="text-emerald-400 font-extrabold text-base">{currentRec.etaAI}</span>
+                  <span className="text-emerald-400 font-extrabold text-base">{currentRec.etaAI || '15 mins'}</span>
                 </div>
 
                 <div className="text-[11px] text-[#9A9A9A] leading-relaxed flex items-start gap-1">
                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0 mt-0.5" />
-                  <span>Route elevation profile checked • Bridge load capacity confirmed safe • Automated WhatsApp alert pre-drafted.</span>
+                  <span>Route elevation profile checked • Bridge load capacity confirmed safe • Automated briefing ready for field lead.</span>
                 </div>
               </div>
 
@@ -339,12 +356,12 @@ export default function Reason() {
 
                 <div className="p-4 rounded-xl bg-black/40 border border-white/5 flex items-center justify-between text-xs font-mono">
                   <span className="text-[#9A9A9A]">Estimated Coordination Lag:</span>
-                  <span className="text-red-400 font-extrabold text-base">{currentRec.etaManual}</span>
+                  <span className="text-red-400 font-extrabold text-base">{currentRec.etaManual || '3-5 hrs'}</span>
                 </div>
 
                 <div className="text-[11px] text-slate-500 leading-relaxed flex items-start gap-1">
                   <AlertCircle className="w-3.5 h-3.5 text-red-500 flex-shrink-0 mt-0.5" />
-                  <span>Requires multi-tier telephone approvals, unverified roadblock risks, manual WhatsApp broadcast drafting.</span>
+                  <span>Requires multi-tier telephone approvals, unverified roadblock risks, manual notification drafting.</span>
                 </div>
               </div>
 
@@ -359,7 +376,7 @@ export default function Reason() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
                 <div className="p-4 rounded-xl bg-white/5 border border-white/5 space-y-1">
                   <span className="text-[#9A9A9A] font-mono text-[10px] block">RESOURCE AVAILABILITY</span>
-                  <span className="text-white font-semibold">{selectedResource.status === 'available' ? '100% Verified in Warehouse' : 'Partial / Deployed'}</span>
+                  <span className="text-white font-semibold">{selectedResource.status === 'available' ? '100% Verified in Warehouse' : 'Deployed / Standby'}</span>
                   <span className={`text-[10px] block font-mono ${selectedResource.status === 'available' ? 'text-emerald-400' : 'text-amber-400'}`}>
                     {selectedResource.status === 'available' ? 'Standby Ready' : 'Limited availability'}
                   </span>
@@ -406,17 +423,21 @@ export default function Reason() {
               </div>
 
               {!isApproved ? (
-                <button
-                  onClick={() => {
-                    if (activeOfficer) {
-                      handleApprove();
-                    }
-                  }}
-                  className="px-6 py-2.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-xs font-mono font-bold text-white whitespace-nowrap transition-all shadow-lg flex items-center gap-2 cursor-pointer"
-                >
-                  <Fingerprint className="w-4 h-4 text-[#FF6B1A]" />
-                  {activeOfficer ? `Authorize as ${activeOfficer.name}` : 'Authenticate & Authorize'}
-                </button>
+                <div className="relative group flex-shrink-0">
+                  <button
+                    onClick={handleApprove}
+                    title={!activeOfficer ? "Officer login required to authorize" : "Authorize dispatch"}
+                    className="px-6 py-2.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-xs font-mono font-bold text-white whitespace-nowrap transition-all shadow-lg flex items-center gap-2 cursor-pointer"
+                  >
+                    <Fingerprint className="w-4 h-4 text-[#FF6B1A]" />
+                    {activeOfficer ? `Authorize as ${activeOfficer.name}` : 'Officer Login Required'}
+                  </button>
+                  {!activeOfficer && (
+                    <div className="absolute right-0 bottom-full mb-2 hidden group-hover:block bg-black/90 text-amber-300 text-[10px] font-mono px-2.5 py-1 rounded shadow border border-amber-500/30 whitespace-nowrap z-30">
+                      Officer login required to authorize dispatches
+                    </div>
+                  )}
+                </div>
               ) : (
                 <span className="px-4 py-2 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-500/30 text-xs font-mono font-bold flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4" />

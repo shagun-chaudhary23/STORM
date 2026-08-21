@@ -41,7 +41,9 @@ db.exec(`
     status TEXT DEFAULT 'available',
     location TEXT,
     assignedZone TEXT,
-    quantity INTEGER
+    quantity INTEGER,
+    team_lead_name TEXT,
+    team_lead_phone TEXT
   );
 
   CREATE TABLE IF NOT EXISTS field_reports (
@@ -51,7 +53,9 @@ db.exec(`
     severity TEXT,
     description TEXT,
     timestamp TEXT,
-    verified INTEGER DEFAULT 0
+    verified INTEGER DEFAULT 0,
+    reporter_name TEXT,
+    reporter_phone TEXT
   );
 
   CREATE TABLE IF NOT EXISTS activity_log (
@@ -68,28 +72,73 @@ db.exec(`
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     rank TEXT NOT NULL,
-    passwordHash TEXT NOT NULL
+    passwordHash TEXT NOT NULL,
+    phone TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS inquiries (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    organization TEXT,
+    role TEXT,
+    message TEXT,
+    timestamp TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS deployments (
+    id TEXT PRIMARY KEY,
+    token TEXT UNIQUE NOT NULL,
+    resource_id TEXT,
+    resource_name TEXT,
+    zone_id TEXT,
+    zone_name TEXT,
+    officer_id TEXT,
+    officer_name TEXT,
+    officer_phone TEXT,
+    team_lead_name TEXT,
+    team_lead_phone TEXT,
+    task_summary TEXT,
+    severity REAL,
+    status TEXT DEFAULT 'pending',
+    notes TEXT,
+    created_at TEXT,
+    updated_at TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS critical_alerts (
+    zone_id TEXT PRIMARY KEY,
+    severity REAL,
+    timestamp TEXT
   );
 `);
 
+// Safe column migrations for existing databases
+function safeAddColumn(table, columnDef) {
+  try {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${columnDef}`);
+  } catch {
+    // Column already exists
+  }
+}
+
+safeAddColumn('resources', 'team_lead_name TEXT');
+safeAddColumn('resources', 'team_lead_phone TEXT');
+safeAddColumn('officers', 'phone TEXT');
+safeAddColumn('field_reports', 'reporter_name TEXT');
+safeAddColumn('field_reports', 'reporter_phone TEXT');
+
 // Initial seed data
-const initialZones = [];
-
-const initialRecommendations = [];
-
 const initialResources = [
-  { id: "RES-1", name: "Medical Team Alpha", type: "medical", status: "available", location: "Gangtok Base", assignedZone: null, quantity: null },
-  { id: "RES-2", name: "NDRF Boat Unit 3", type: "rescue", status: "available", location: "Teesta River Post", assignedZone: null, quantity: null },
-  { id: "RES-3", name: "Relief Kit Stock", type: "supplies", status: "available", location: "Central Warehouse", assignedZone: null, quantity: 850 },
-  { id: "RES-4", name: "Medical Team Beta", type: "medical", status: "deployed", location: "Zone 2A", assignedZone: "Zone 2A – Kalimpong", quantity: null }
+  { id: "RES-1", name: "Medical Team Alpha", type: "medical", status: "available", location: "Gangtok Base", assignedZone: null, quantity: null, team_lead_name: "Major Dr. R. Nair", team_lead_phone: "+919876543220" },
+  { id: "RES-2", name: "NDRF Boat Unit 3", type: "rescue", status: "available", location: "Teesta River Post", assignedZone: null, quantity: null, team_lead_name: "Subedar S. Roy", team_lead_phone: "+919876543221" },
+  { id: "RES-3", name: "Relief Kit Stock", type: "supplies", status: "available", location: "Central Warehouse", assignedZone: null, quantity: 850, team_lead_name: "Inspector K. Das", team_lead_phone: "+919876543222" },
+  { id: "RES-4", name: "Medical Team Beta", type: "medical", status: "deployed", location: "Zone 2A", assignedZone: "Zone 2A – Kalimpong", quantity: null, team_lead_name: "Dr. V. Rao", team_lead_phone: "+919876543223" }
 ];
 
-const initialFieldReports = [];
-
 const initialOfficers = [
-  { id: "OFF-101", name: "Col. Rajesh Sharma", rank: "SDMA Relief Commissioner", passwordHash: bcrypt.hashSync("officer101", 10) },
-  { id: "OFF-102", name: "Dr. Ananya Sen", rank: "NDMA Operations Chief", passwordHash: bcrypt.hashSync("officer102", 10) },
-  { id: "OFF-103", name: "Capt. Vikram Malhotra", rank: "NDRF Sector Commander", passwordHash: bcrypt.hashSync("officer103", 10) }
+  { id: "OFF-101", name: "Col. Rajesh Sharma", rank: "SDMA Relief Commissioner", passwordHash: bcrypt.hashSync("officer101", 10), phone: "+919876543210" },
+  { id: "OFF-102", name: "Dr. Ananya Sen", rank: "NDMA Operations Chief", passwordHash: bcrypt.hashSync("officer102", 10), phone: "+919876543211" },
+  { id: "OFF-103", name: "Capt. Vikram Malhotra", rank: "NDRF Sector Commander", passwordHash: bcrypt.hashSync("officer103", 10), phone: "+919876543212" }
 ];
 
 const initialLogs = [
@@ -98,74 +147,57 @@ const initialLogs = [
 
 // Seed if empty
 function seedDatabaseIfEmpty() {
-  const zoneCount = db.prepare('SELECT COUNT(*) as count FROM zones').get().count;
-  if (zoneCount === 0) {
-    const insertZone = db.prepare(`
-      INSERT INTO zones (id, name, type, severity, status, population, activeIncidents, coordinates)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-    const insertManyZones = db.transaction((zones) => {
-      for (const z of zones) {
-        insertZone.run(z.id, z.name, z.type || 'Earthquake', z.severity || 5, z.status || 'warning', z.population || 0, z.activeIncidents || 0, z.coordinates || null);
-      }
-    });
-    insertManyZones(initialZones);
-  }
-
-  const recCount = db.prepare('SELECT COUNT(*) as count FROM recommendations').get().count;
-  if (recCount === 0) {
-    const insertRec = db.prepare(`
-      INSERT INTO recommendations (id, zone, action, confidence, resourceNeeded, etaManual, etaAI, status, approvedAt, approvedBy)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-    const insertManyRecs = db.transaction((recs) => {
-      for (const r of recs) {
-        insertRec.run(r.id, r.zone, r.action, r.confidence || 90, r.resourceNeeded || '', r.etaManual || '3 hrs', r.etaAI || '15 mins', r.status || 'pending', r.approvedAt || null, r.approvedBy || null);
-      }
-    });
-    insertManyRecs(initialRecommendations);
-  }
-
   const resCount = db.prepare('SELECT COUNT(*) as count FROM resources').get().count;
   if (resCount === 0) {
     const insertRes = db.prepare(`
-      INSERT INTO resources (id, name, type, status, location, assignedZone, quantity)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO resources (id, name, type, status, location, assignedZone, quantity, team_lead_name, team_lead_phone)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     const insertManyRes = db.transaction((resources) => {
       for (const r of resources) {
-        insertRes.run(r.id, r.name, r.type, r.status || 'available', r.location || '', r.assignedZone || null, r.quantity || null);
+        insertRes.run(r.id, r.name, r.type, r.status || 'available', r.location || '', r.assignedZone || null, r.quantity || null, r.team_lead_name || null, r.team_lead_phone || null);
       }
     });
     insertManyRes(initialResources);
-  }
-
-  const repCount = db.prepare('SELECT COUNT(*) as count FROM field_reports').get().count;
-  if (repCount === 0) {
-    const insertRep = db.prepare(`
-      INSERT INTO field_reports (id, location, category, severity, description, timestamp, verified)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `);
-    const insertManyReps = db.transaction((reports) => {
-      for (const rep of reports) {
-        insertRep.run(rep.id, rep.location, rep.category, rep.severity || '', rep.description || '', rep.timestamp || '', rep.verified ? 1 : 0);
-      }
-    });
-    insertManyReps(initialFieldReports);
+  } else {
+    // Update existing resources with team leads if missing
+    for (const r of initialResources) {
+      db.prepare(`
+        UPDATE resources 
+        SET team_lead_name = COALESCE(team_lead_name, ?), team_lead_phone = COALESCE(team_lead_phone, ?)
+        WHERE id = ?
+      `).run(r.team_lead_name, r.team_lead_phone, r.id);
+    }
   }
 
   const offCount = db.prepare('SELECT COUNT(*) as count FROM officers').get().count;
   if (offCount === 0) {
     const insertOfficer = db.prepare(`
-      INSERT INTO officers (id, name, rank, passwordHash)
-      VALUES (?, ?, ?, ?)
+      INSERT INTO officers (id, name, rank, passwordHash, phone)
+      VALUES (?, ?, ?, ?, ?)
     `);
     const insertManyOfficers = db.transaction((officers) => {
       for (const o of officers) {
-        insertOfficer.run(o.id, o.name, o.rank, o.passwordHash);
+        insertOfficer.run(o.id, o.name, o.rank, o.passwordHash, o.phone);
       }
     });
     insertManyOfficers(initialOfficers);
+  } else {
+    // Hash existing plaintext passwords and update phone numbers
+    for (const o of initialOfficers) {
+      const existing = db.prepare('SELECT * FROM officers WHERE id = ?').get(o.id);
+      if (existing) {
+        let hash = existing.passwordHash;
+        if (!hash.startsWith('$2b$') && !hash.startsWith('$2a$')) {
+          hash = bcrypt.hashSync(hash, 10);
+        }
+        db.prepare(`
+          UPDATE officers 
+          SET passwordHash = ?, phone = COALESCE(phone, ?)
+          WHERE id = ?
+        `).run(hash, o.phone, o.id);
+      }
+    }
   }
 
   const logCount = db.prepare('SELECT COUNT(*) as count FROM activity_log').get().count;
@@ -326,8 +358,8 @@ function addFieldReport(report) {
   const verified = report.verified ? 1 : 0;
   
   db.prepare(`
-    INSERT INTO field_reports (id, location, category, severity, description, timestamp, verified)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO field_reports (id, location, category, severity, description, timestamp, verified, reporter_name, reporter_phone)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     report.id, 
     report.location, 
@@ -335,7 +367,9 @@ function addFieldReport(report) {
     report.severity, 
     report.description, 
     time, 
-    verified
+    verified,
+    report.reporter_name || report.reporterName || null,
+    report.reporter_phone || report.reporterPhone || null
   );
 
   return db.prepare('SELECT * FROM field_reports WHERE id = ?').get(report.id);
@@ -351,20 +385,103 @@ function addLog(event, type, officerId = null, officerName = null) {
 }
 
 function getOfficers() {
-  return db.prepare('SELECT id, name, rank FROM officers').all();
+  return db.prepare('SELECT id, name, rank, phone FROM officers').all();
+}
+
+function getOfficerById(id) {
+  return db.prepare('SELECT id, name, rank, phone FROM officers WHERE id = ?').get(id);
 }
 
 function authenticateOfficer(officerId, password) {
   const officer = db.prepare('SELECT * FROM officers WHERE id = ?').get(officerId);
   if (!officer) return null;
-  if (bcrypt.compareSync(password, officer.passwordHash)) {
+
+  let valid = false;
+  if (officer.passwordHash && (officer.passwordHash.startsWith('$2a$') || officer.passwordHash.startsWith('$2b$'))) {
+    valid = bcrypt.compareSync(password, officer.passwordHash);
+  } else if (officer.passwordHash === password) {
+    valid = true;
+    const newHash = bcrypt.hashSync(password, 10);
+    db.prepare('UPDATE officers SET passwordHash = ? WHERE id = ?').run(newHash, officer.id);
+  }
+
+  if (valid) {
     return {
       id: officer.id,
       name: officer.name,
-      rank: officer.rank
+      rank: officer.rank,
+      phone: officer.phone
     };
   }
   return null;
+}
+
+// Inquiries / Pilot Requests
+function saveInquiry(inquiry) {
+  const id = inquiry.id || `INQ-${Date.now()}`;
+  const timestamp = new Date().toISOString();
+  db.prepare(`
+    INSERT INTO inquiries (id, name, organization, role, message, timestamp)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `).run(id, inquiry.name, inquiry.organization || '', inquiry.role || '', inquiry.message || '', timestamp);
+  return db.prepare('SELECT * FROM inquiries WHERE id = ?').get(id);
+}
+
+function getInquiries() {
+  return db.prepare('SELECT * FROM inquiries ORDER BY timestamp DESC').all();
+}
+
+// Deployments / Two-Way SMS Tracking
+function createDeployment(dep) {
+  const id = dep.id || `DEP-${Date.now()}`;
+  const token = dep.token || require('crypto').randomBytes(16).toString('hex');
+  const now = new Date().toISOString();
+  
+  db.prepare(`
+    INSERT INTO deployments (
+      id, token, resource_id, resource_name, zone_id, zone_name,
+      officer_id, officer_name, officer_phone,
+      team_lead_name, team_lead_phone, task_summary, severity,
+      status, notes, created_at, updated_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    id, token, dep.resource_id, dep.resource_name, dep.zone_id, dep.zone_name,
+    dep.officer_id, dep.officer_name, dep.officer_phone,
+    dep.team_lead_name, dep.team_lead_phone, dep.task_summary, dep.severity || 5,
+    'pending', null, now, now
+  );
+
+  return db.prepare('SELECT * FROM deployments WHERE id = ?').get(id);
+}
+
+function getDeploymentByToken(token) {
+  return db.prepare('SELECT * FROM deployments WHERE token = ?').get(token);
+}
+
+function updateDeploymentStatus(token, status, notes = '') {
+  const now = new Date().toISOString();
+  db.prepare(`
+    UPDATE deployments
+    SET status = ?, notes = ?, updated_at = ?
+    WHERE token = ?
+  `).run(status, notes, now, token);
+
+  return db.prepare('SELECT * FROM deployments WHERE token = ?').get(token);
+}
+
+// Critical Alerts tracking
+function isZoneAlerted(zoneId) {
+  const record = db.prepare('SELECT * FROM critical_alerts WHERE zone_id = ?').get(zoneId);
+  return !!record;
+}
+
+function recordCriticalAlert(zoneId, severity) {
+  const now = new Date().toISOString();
+  db.prepare(`
+    INSERT OR REPLACE INTO critical_alerts (zone_id, severity, timestamp)
+    VALUES (?, ?, ?)
+  `).run(zoneId, severity, now);
 }
 
 module.exports = {
@@ -382,7 +499,15 @@ module.exports = {
   getActivityLog,
   addLog,
   getOfficers,
+  getOfficerById,
   authenticateOfficer,
   getFieldReports,
-  addFieldReport
+  addFieldReport,
+  saveInquiry,
+  getInquiries,
+  createDeployment,
+  getDeploymentByToken,
+  updateDeploymentStatus,
+  isZoneAlerted,
+  recordCriticalAlert
 };

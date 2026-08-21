@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import io from 'socket.io-client';
-import { resources as initialResources, zones as initialZones } from '../data/mockData';
+import { useApp } from '../context/AppContext';
 import { 
   Truck, ShieldAlert, HeartPulse, LifeBuoy, Package, 
-  MapPin, CheckCircle2, AlertCircle, RefreshCw, Filter, Navigation
+  MapPin, CheckCircle2, AlertCircle, RefreshCw, Filter, Navigation, KeyRound
 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 const socket = io(API_URL, {
+  auth: { token: localStorage.getItem('storm_officer_token') },
   reconnection: true,
   reconnectionAttempts: 5,
   reconnectionDelay: 1000,
@@ -18,8 +19,10 @@ const socket = io(API_URL, {
 });
 
 export default function Resources() {
-  const [resources, setResources] = useState(initialResources);
-  const [liveZones, setLiveZones] = useState(initialZones);
+  const { activeOfficer, openLoginModal } = useApp();
+
+  const [resources, setResources] = useState([]);
+  const [liveZones, setLiveZones] = useState([]);
   const [filterType, setFilterType] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [selectedResource, setSelectedResource] = useState(null);
@@ -27,23 +30,30 @@ export default function Resources() {
   const [selectedZone, setSelectedZone] = useState('');
 
   useEffect(() => {
+    socket.auth = { token: localStorage.getItem('storm_officer_token') };
+
     const handleStateUpdate = (data) => {
       if (data) {
-        if (data.resources && data.resources.length > 0) {
+        if (data.resources) {
           setResources(data.resources);
         }
-        if (data.zones && data.zones.length > 0) {
+        if (data.zones) {
           setLiveZones(data.zones);
         }
       }
     };
 
     socket.on('storm_state_update', handleStateUpdate);
+    socket.on('auth_error', (data) => {
+      alert(`Authorization Error: ${data.message || 'Action denied'}`);
+      openLoginModal();
+    });
 
     return () => {
       socket.off('storm_state_update', handleStateUpdate);
+      socket.off('auth_error');
     };
-  }, []);
+  }, [openLoginModal]);
 
   const totalResources = resources.length;
   const availableCount = resources.filter(r => r.status === 'available').length;
@@ -65,6 +75,10 @@ export default function Resources() {
   });
 
   const handleAssignClick = (resource) => {
+    if (!activeOfficer) {
+      openLoginModal();
+      return;
+    }
     setSelectedResource(resource);
     setSelectedZone(liveZones[0]?.id || '');
     setAssignmentModalOpen(true);
@@ -74,21 +88,23 @@ export default function Resources() {
     e.preventDefault();
     if (!selectedResource || !selectedZone) return;
 
+    if (!activeOfficer) {
+      setAssignmentModalOpen(false);
+      openLoginModal();
+      return;
+    }
+
     const zoneObj = liveZones.find(z => z.id === selectedZone);
-    const zoneName = zoneObj?.name || 'Unknown Zone';
-    
-    let officer = null;
-    try {
-      const saved = localStorage.getItem('storm_officer');
-      if (saved) officer = JSON.parse(saved);
-    } catch {}
+    const zoneName = zoneObj?.name || selectedZone;
+    const token = localStorage.getItem('storm_officer_token');
 
     const payload = {
-      resourceId: selectedResource.id || selectedResource.name,
+      resourceId: selectedResource.id,
       targetZoneId: selectedZone,
       targetZoneName: zoneName,
-      officerId: officer?.id || 'SDMA-CMD',
-      officerName: officer?.name || 'Relief Coordinator'
+      taskSummary: `Deploy ${selectedResource.name} to ${zoneName}`,
+      severity: zoneObj?.severity || 7,
+      token: token
     };
 
     socket.emit('bind_resource', payload);
@@ -122,7 +138,7 @@ export default function Resources() {
             Resource Match & Deploy
           </h1>
           <p className="text-sm text-[#9A9A9A]">
-            Select available assets and bind them directly to active incident zones.
+            Select available assets and bind them directly to active incident zones with automated team lead briefing.
           </p>
         </div>
 
@@ -131,7 +147,7 @@ export default function Resources() {
           <div className="p-6 rounded-2xl bg-[#141414] border border-white/10 space-y-1">
             <span className="text-xs font-mono uppercase tracking-wider text-[#9A9A9A]">Total Registered Assets</span>
             <div className="text-3xl font-black text-white">{totalResources}</div>
-            <span className="text-[11px] text-slate-400">Tracked Across Sikkim & Bengal Sector</span>
+            <span className="text-[11px] text-slate-400">Tracked Across Incident Bases</span>
           </div>
 
           <div className="p-6 rounded-2xl bg-[#141414] border border-emerald-500/20 space-y-1 relative overflow-hidden">
@@ -226,11 +242,17 @@ export default function Resources() {
                         </span>
                       </div>
 
-                      <div className="space-y-3 pt-2 border-t border-white/5 text-xs">
+                      <div className="space-y-2.5 pt-2 border-t border-white/5 text-xs">
                         <div className="flex justify-between items-center">
-                          <span className="text-[#9A9A9A] font-mono flex items-center gap-1"><MapPin className="w-3 h-3"/> Base:</span>
+                          <span className="text-[#9A9A9A] font-mono flex items-center gap-1"><MapPin className="w-3 h-3"/> Base Station:</span>
                           <span className="text-slate-200">{item.location}</span>
                         </div>
+                        {item.team_lead_name && (
+                          <div className="flex justify-between items-center">
+                            <span className="text-[#9A9A9A] font-mono">Team Lead:</span>
+                            <span className="text-slate-200 font-semibold">{item.team_lead_name}</span>
+                          </div>
+                        )}
                         {item.quantity && (
                           <div className="flex justify-between items-center">
                             <span className="text-[#9A9A9A] font-mono">Volume:</span>
@@ -239,7 +261,7 @@ export default function Resources() {
                         )}
                         {!isAvailable && item.assignedZone && (
                           <div className="flex justify-between items-center">
-                            <span className="text-[#9A9A9A] font-mono">Target:</span>
+                            <span className="text-[#9A9A9A] font-mono">Assigned Sector:</span>
                             <span className="text-[#FF6B1A] font-bold">{item.assignedZone}</span>
                           </div>
                         )}
@@ -275,18 +297,18 @@ export default function Resources() {
                 <h2 className="text-base font-bold text-white">Active Incident Zones</h2>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
                 {liveZones.map(zone => (
                   <div key={zone.id} className="p-4 rounded-xl bg-black/40 border border-white/5 hover:border-red-500/30 transition-colors">
                     <div className="flex justify-between items-start mb-2">
-                      <h3 className="text-sm font-bold text-white">{zone.name}</h3>
-                      <span className="px-2 py-0.5 rounded-full bg-red-950 text-red-400 text-[10px] font-mono font-bold">
+                      <h3 className="text-sm font-bold text-white truncate pr-2">{zone.name}</h3>
+                      <span className="px-2 py-0.5 rounded-full bg-red-950 text-red-400 text-[10px] font-mono font-bold flex-shrink-0">
                         Sev {zone.severity}/10
                       </span>
                     </div>
                     <div className="text-[10px] text-[#9A9A9A] font-mono flex justify-between">
-                      <span>Pop: {zone.population?.toLocaleString() || 'N/A'}</span>
-                      <span>Incidents: {zone.activeIncidents || 1}</span>
+                      <span>Est. Pop: {Number(zone.population || 0).toLocaleString()}</span>
+                      <span className="text-emerald-400">{zone.type || 'Incident'}</span>
                     </div>
                   </div>
                 ))}
@@ -305,30 +327,32 @@ export default function Resources() {
               <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center mb-4">
                 <Navigation className="w-6 h-6" />
               </div>
-              <h2 className="text-xl font-bold text-white">Deploy Asset</h2>
+              <h2 className="text-xl font-bold text-white">Deploy & Brief Field Unit</h2>
               <p className="text-xs text-[#9A9A9A]">
-                You are about to deploy <strong className="text-emerald-400">{selectedResource.name}</strong>. Select the destination zone.
+                You are deploying <strong className="text-emerald-400">{selectedResource.name}</strong>. Team Lead: <strong className="text-white">{selectedResource.team_lead_name || 'Unit Commander'}</strong>.
               </p>
             </div>
 
             <form onSubmit={confirmAssignment} className="space-y-5">
               <div className="space-y-2">
-                <label className="block text-xs font-bold text-slate-300">Target Zone</label>
+                <label className="block text-xs font-bold text-slate-300">Target Incident Zone</label>
                 <select
                   value={selectedZone}
                   onChange={(e) => setSelectedZone(e.target.value)}
                   className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl p-3.5 text-xs text-white focus:outline-none focus:border-emerald-500"
                 >
                   {liveZones.map(z => (
-                    <option key={z.id} value={z.id}>{z.name} (Severity: {z.severity})</option>
+                    <option key={z.id} value={z.id}>{z.name} (Severity: {z.severity}/10)</option>
                   ))}
                 </select>
               </div>
 
-              <div className="p-4 rounded-xl bg-white/5 border border-white/10 text-xs font-mono text-[#9A9A9A]">
-                Current Location: <span className="text-slate-200">{selectedResource.location}</span>
-                <br/>
-                Estimated Time: <span className="text-emerald-400">Computing route via State Highway...</span>
+              <div className="p-4 rounded-xl bg-white/5 border border-white/10 text-xs font-mono text-[#9A9A9A] space-y-1">
+                <div>Base Location: <span className="text-slate-200">{selectedResource.location}</span></div>
+                <div>Team Lead Contact: <span className="text-emerald-400">{selectedResource.team_lead_phone || 'Radio Channel 4'}</span></div>
+                <div className="text-[10px] text-amber-400 pt-1">
+                  Automated SMS dispatch order with response link will be transmitted to team lead upon confirmation.
+                </div>
               </div>
 
               <div className="flex gap-3 pt-2">
@@ -341,10 +365,10 @@ export default function Resources() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-3 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl shadow-lg transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                  className="flex-1 py-3 text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:opacity-95 rounded-xl shadow-lg transition-all cursor-pointer flex items-center justify-center gap-1.5"
                 >
                   <Navigation className="w-4 h-4" />
-                  Confirm & BIND
+                  Authorize & BIND
                 </button>
               </div>
             </form>

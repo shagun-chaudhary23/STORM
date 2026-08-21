@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import io from 'socket.io-client';
-import { 
-  resources as initialResources 
-} from '../data/mockData';
+import { useApp } from '../context/AppContext';
 import { 
   ShieldAlert, UserCheck, CheckCircle2, XCircle, Clock, 
-  Layers, Truck, ArrowRight, Radio, Bell, RefreshCw, AlertTriangle, Download, Sparkles
+  Layers, Truck, ArrowRight, Radio, Bell, RefreshCw, AlertTriangle, Download, Sparkles, KeyRound
 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -21,16 +19,20 @@ const socket = io(API_URL, {
 });
 
 export default function Dashboard() {
-  const [activeTab, setActiveTab] = useState('overview');
+  const { activeOfficer, openLoginModal } = useApp();
+
   const [activeZones, setActiveZones] = useState([]);
   const [pendingRecs, setPendingRecs] = useState([]);
   const [approvedRecs, setApprovedRecs] = useState([]);
   const [liveActivityLog, setLiveActivityLog] = useState([]);
-  const [liveResources, setLiveResources] = useState(initialResources);
+  const [liveResources, setLiveResources] = useState([]);
   const [fieldReports, setFieldReports] = useState([]);
   const [isDisconnected, setIsDisconnected] = useState(!socket.connected);
+  const [inAppAlert, setInAppAlert] = useState(null);
 
   useEffect(() => {
+    socket.auth = { token: localStorage.getItem('storm_officer_token') };
+
     const handleConnect = () => {
       setIsDisconnected(false);
     };
@@ -56,17 +58,33 @@ export default function Dashboard() {
 
     socket.on('storm_state_update', (data) => {
       if (data) {
-        if (data.zones) setActiveZones(data.zones);
-        if (data.pendingRecommendations) setPendingRecs(data.pendingRecommendations);
-        if (data.approvedRecommendations) setApprovedRecs(data.approvedRecommendations);
-        if (data.activityLog) setLiveActivityLog(data.activityLog);
-        if (data.resources) setLiveResources(data.resources);
-        if (data.fieldReports) setFieldReports(data.fieldReports);
+        // Audit and warn if any of the five expected keys are missing
+        const expectedKeys = ['zones', 'pendingRecommendations', 'approvedRecommendations', 'activityLog', 'resources'];
+        expectedKeys.forEach(key => {
+          if (data[key] === undefined) {
+            console.warn(`[STORM Warning] storm_state_update payload missing expected key: '${key}'`);
+          }
+        });
+
+        if (data.zones !== undefined) setActiveZones(data.zones);
+        if (data.pendingRecommendations !== undefined) setPendingRecs(data.pendingRecommendations);
+        if (data.approvedRecommendations !== undefined) setApprovedRecs(data.approvedRecommendations);
+        if (data.activityLog !== undefined) setLiveActivityLog(data.activityLog);
+        if (data.resources !== undefined) setLiveResources(data.resources);
+        if (data.fieldReports !== undefined) setFieldReports(data.fieldReports);
       }
     });
 
     socket.on('auth_error', (data) => {
       alert(`Authorization Error: ${data.message || 'Action denied'}`);
+      openLoginModal();
+    });
+
+    socket.on('notification_broadcast', (alertData) => {
+      if (alertData.type === 'CRITICAL_ZONE_ALERT') {
+        setInAppAlert(alertData);
+        setTimeout(() => setInAppAlert(null), 12000);
+      }
     });
 
     if (!socket.connected) {
@@ -80,34 +98,42 @@ export default function Dashboard() {
       socket.off('reconnect', handleReconnect);
       socket.off('storm_state_update');
       socket.off('auth_error');
+      socket.off('notification_broadcast');
     };
-  }, []);
+  }, [openLoginModal]);
 
   const activeZonesCount = activeZones.length;
   const availableResourcesCount = liveResources.filter(r => r.status === 'available').length;
 
   const handleApprove = (rec) => {
-    let officer = null;
-    try {
-      const saved = localStorage.getItem('storm_officer');
-      if (saved) officer = JSON.parse(saved);
-    } catch {}
+    if (!activeOfficer) {
+      openLoginModal();
+      return;
+    }
 
+    const token = localStorage.getItem('storm_officer_token');
     const payload = {
       ...rec,
-      officerId: officer?.id || 'OFF-101',
-      officerName: officer?.name || 'Col. Rajesh Sharma',
-      rank: officer?.rank || 'SDMA Relief Commissioner'
+      officerId: activeOfficer.id,
+      officerName: activeOfficer.name,
+      rank: activeOfficer.rank,
+      token: token
     };
 
     socket.emit('approve_recommendation', payload);
-    setPendingRecs(pendingRecs.filter(r => r.id !== rec.id));
-    setApprovedRecs([{ ...payload, status: 'approved', approvedAt: 'Just now' }, ...approvedRecs]);
+    setPendingRecs(prev => prev.filter(r => r.id !== rec.id));
+    setApprovedRecs(prev => [{ ...payload, status: 'approved', approvedAt: 'Just now', approvedBy: `${activeOfficer.name} (${activeOfficer.rank})` }, ...prev]);
   };
 
   const handleReject = (recId) => {
-    socket.emit('reject_recommendation', recId);
-    setPendingRecs(pendingRecs.filter(r => r.id !== recId));
+    if (!activeOfficer) {
+      openLoginModal();
+      return;
+    }
+
+    const token = localStorage.getItem('storm_officer_token');
+    socket.emit('reject_recommendation', { id: recId, token });
+    setPendingRecs(prev => prev.filter(r => r.id !== recId));
   };
 
   const handleExportCSV = () => {
@@ -141,6 +167,23 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-[#0A0A0A] text-slate-100 pt-24 pb-12">
       
+      {/* Critical In-App Alert Banner */}
+      {inAppAlert && (
+        <div className="bg-red-600 text-white font-mono text-xs px-4 py-3 flex items-center justify-between border-b border-red-400 sticky top-16 z-50 animate-bounce shadow-2xl">
+          <div className="flex items-center gap-2 max-w-4xl truncate">
+            <AlertTriangle className="w-5 h-5 flex-shrink-0 animate-pulse" />
+            <span className="font-bold uppercase tracking-wider">[CRITICAL SENTRY ALERT]</span>
+            <span>{inAppAlert.zoneName} reached Severity {inAppAlert.severity}/10 ({inAppAlert.disasterType}). Immediate tactical response required.</span>
+          </div>
+          <button 
+            onClick={() => setInAppAlert(null)}
+            className="text-white hover:text-red-200 text-xs font-bold underline cursor-pointer"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
       {/* Disconnection Alert Banner */}
       {isDisconnected && (
         <div className="bg-red-500/90 text-white font-mono text-xs px-4 py-2.5 text-center flex items-center justify-center gap-2 border-b border-red-400/30 sticky top-16 z-40 animate-pulse shadow-lg">
@@ -158,8 +201,20 @@ export default function Dashboard() {
           <span className="hidden sm:inline-block">District Command Mode</span>
         </div>
 
-        <div className="px-3 py-0.5 rounded-full bg-[#FF6B1A]/15 border border-[#FF6B1A]/30 text-[#FF6B1A] font-bold text-[10px] uppercase tracking-wider">
-          Demo view — simulated data
+        <div className="flex items-center gap-2">
+          {activeOfficer ? (
+            <span className="text-[10px] text-emerald-400 font-mono">Officer: <strong>{activeOfficer.name}</strong></span>
+          ) : (
+            <button 
+              onClick={openLoginModal}
+              className="text-[10px] text-amber-400 underline font-mono cursor-pointer"
+            >
+              Sign In
+            </button>
+          )}
+          <span className="px-3 py-0.5 rounded-full bg-[#FF6B1A]/15 border border-[#FF6B1A]/30 text-[#FF6B1A] font-bold text-[10px] uppercase tracking-wider">
+            Live Telemetry Engine
+          </span>
         </div>
       </div>
 
@@ -265,18 +320,20 @@ export default function Dashboard() {
                       </p>
                     </div>
 
-                    {/* Fixed Width Action Buttons */}
+                    {/* Action Buttons with Auth Guard */}
                     <div className="pt-2 flex flex-wrap items-center gap-3">
                       <button
                         onClick={() => handleApprove(rec)}
+                        title={!activeOfficer ? "Officer login required" : "Approve & Dispatch"}
                         className="w-48 py-2.5 px-4 bg-gradient-to-r from-[#FF6B1A] to-[#E8391A] hover:opacity-95 text-white font-bold text-xs uppercase tracking-wider rounded-full shadow-lg shadow-[#FF6B1A]/20 transition-all cursor-pointer inline-flex items-center justify-center gap-2"
                       >
                         <UserCheck className="w-3.5 h-3.5" />
-                        <span>Approve & Dispatch</span>
+                        <span>{activeOfficer ? 'Approve & Dispatch' : 'Login to Approve'}</span>
                       </button>
 
                       <button
                         onClick={() => handleReject(rec.id)}
+                        title={!activeOfficer ? "Officer login required" : "Reject recommendation"}
                         className="w-36 py-2.5 px-4 bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 font-semibold text-xs rounded-full transition-colors cursor-pointer inline-flex items-center justify-center gap-1.5"
                       >
                         <XCircle className="w-3.5 h-3.5" />
@@ -351,8 +408,10 @@ export default function Dashboard() {
               {liveActivityLog.map((log, idx) => (
                 <div key={idx} className="flex items-start gap-3 text-xs pb-3 border-b border-white/5 last:border-0 last:pb-0">
                   <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
-                    log.type === 'alert' ? 'bg-red-500' :
+                    log.type === 'alert' || log.type === 'critical_alert_sent' ? 'bg-red-500' :
                     log.type === 'approval' ? 'bg-emerald-400' :
+                    log.type === 'deployment_response' ? 'bg-cyan-400' :
+                    log.type === 'notification_sent' ? 'bg-purple-400' :
                     log.type === 'system' ? 'bg-amber-400' : 'bg-[#FF6B1A]'
                   }`}></div>
                   <div className="space-y-0.5 flex-1">
@@ -368,21 +427,21 @@ export default function Dashboard() {
               ))}
             </div>
 
-            {/* Quick Links */}
+            {/* Live Data Feeds */}
             <div className="p-5 rounded-2xl bg-[#141414] border border-white/10 space-y-3">
-              <span className="text-xs font-bold text-white block">Active Data Feeds</span>
+              <span className="text-xs font-bold text-white block">Active Telemetry Ingestion</span>
               <div className="text-xs text-[#9A9A9A] space-y-2">
                 <div className="flex justify-between items-center">
-                  <span>USGS Earthquake Feed</span>
+                  <span>USGS Real-Time Earthquake</span>
                   <span className="px-2 py-0.5 bg-emerald-950/50 text-emerald-400 font-mono text-[10px] rounded-md border border-emerald-500/30">Live Sync</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span>Open-Meteo Weather API</span>
+                  <span>Open-Meteo Weather Streams</span>
                   <span className="px-2 py-0.5 bg-emerald-950/50 text-emerald-400 font-mono text-[10px] rounded-md border border-emerald-500/30">Live Sync</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span>GDACS Global Disaster</span>
-                  <span className="px-2 py-0.5 bg-amber-950/50 text-amber-400 font-mono text-[10px] rounded-md border border-amber-500/30">Delayed</span>
+                  <span>NDMA Sachet & ISRO Feeds</span>
+                  <span className="px-2 py-0.5 bg-slate-800 text-slate-400 font-mono text-[10px] rounded-md border border-slate-700">Illustrative</span>
                 </div>
               </div>
             </div>
