@@ -12,6 +12,8 @@ import Reason from './pages/Reason';
 import Report from './pages/Report';
 import HowItWorks from './pages/HowItWorks';
 import About from './pages/About';
+import Login from './pages/Login';
+import ProtectedRoute from './components/ProtectedRoute';
 
 // Scroll to top helper on route change
 function ScrollToTop() {
@@ -46,13 +48,17 @@ export default function App() {
       <main className="flex-grow">
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/resources" element={<Resources />} />
-          <Route path="/sense" element={<Sense />} />
-          <Route path="/reason" element={<Reason />} />
-          <Route path="/report" element={<Report />} />
           <Route path="/how-it-works" element={<HowItWorks />} />
           <Route path="/about" element={<About />} />
+          <Route path="/login" element={<Login />} />
+          
+          <Route element={<ProtectedRoute />}>
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/resources" element={<Resources />} />
+            <Route path="/sense" element={<Sense />} />
+            <Route path="/reason" element={<Reason />} />
+            <Route path="/report" element={<Report />} />
+          </Route>
         </Routes>
       </main>
 

@@ -18,11 +18,7 @@ const socket = io(API_URL, {
   timeout: 5000
 });
 
-const DEFAULT_OFFICERS = [
-  { id: "OFF-101", name: "Col. Rajesh Sharma", rank: "SDMA Relief Commissioner", defaultPass: "officer101" },
-  { id: "OFF-102", name: "Dr. Ananya Sen", rank: "NDMA Operations Chief", defaultPass: "officer102" },
-  { id: "OFF-103", name: "Capt. Vikram Malhotra", rank: "NDRF Sector Commander", defaultPass: "officer103" }
-];
+
 
 export default function Reason() {
   const [selectedZoneId, setSelectedZoneId] = useState(zones[0].id);
@@ -42,10 +38,6 @@ export default function Reason() {
       return null;
     }
   });
-  const [officerIdInput, setOfficerIdInput] = useState(DEFAULT_OFFICERS[0].id);
-  const [passwordInput, setPasswordInput] = useState(DEFAULT_OFFICERS[0].defaultPass);
-  const [authError, setAuthError] = useState('');
-  const [isAuthenticating, setIsAuthenticating] = useState(false);
 
   // Match recommendation for selected zone or fallback to first
   const currentRec = liveRecommendation || (recommendations.find(r => r.zone === selectedZoneId) || recommendations[0]);
@@ -83,83 +75,8 @@ export default function Reason() {
     }
   };
 
-  const handleOfficerLoginAndApprove = async (e) => {
-    e.preventDefault();
-    setAuthError('');
-    setIsAuthenticating(true);
-
-    try {
-      // Authenticate against server
-      let officer = null;
-      try {
-        const response = await fetch(`${API_URL}/api/login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            officerId: officerIdInput,
-            password: passwordInput
-          })
-        });
-        const data = await response.json();
-        if (response.ok && data.officer && data.token) {
-          officer = data.officer;
-          localStorage.setItem('storm_officer_token', data.token);
-          socket.auth = { token: data.token };
-          socket.disconnect().connect();
-        } else {
-          setAuthError(data.error || 'Invalid credentials');
-          setIsAuthenticating(false);
-          return;
-        }
-      } catch {
-        // Local fallback check if backend unreachable
-        const found = DEFAULT_OFFICERS.find(o => o.id === officerIdInput && o.defaultPass === passwordInput);
-        if (found) {
-          officer = { id: found.id, name: found.name, rank: found.rank };
-        } else {
-          setAuthError('Invalid credentials');
-          setIsAuthenticating(false);
-          return;
-        }
-      }
-
-      if (officer) {
-        setActiveOfficer(officer);
-        localStorage.setItem('storm_officer', JSON.stringify(officer));
-
-        // Emit approve_recommendation socket event
-        const recPayload = {
-          id: currentRec.id || `REC-AI-${Date.now()}`,
-          recommendationId: currentRec.id || `REC-AI-${Date.now()}`,
-          zone: currentZone.name,
-          action: currentRec.action,
-          resourceNeeded: selectedResource.name,
-          etaAI: currentRec.etaAI || '15 mins',
-          etaManual: currentRec.etaManual || '3 hrs',
-          confidence: currentRec.confidence || 90,
-          officerId: officer.id,
-          officerName: officer.name,
-          rank: officer.rank,
-          timestamp: new Date().toISOString()
-        };
-
-        socket.emit('approve_recommendation', recPayload);
-
-        setIsApproved(true);
-        setShowAuthModal(false);
-      }
-    } catch (err) {
-      setAuthError('Authentication error: ' + err.message);
-    } finally {
-      setIsAuthenticating(false);
-    }
-  };
-
-  const handleQuickApprove = () => {
-    if (!activeOfficer) {
-      setShowAuthModal(true);
-      return;
-    }
+  const handleApprove = () => {
+    if (!activeOfficer) return;
 
     const recPayload = {
       id: currentRec.id || `REC-AI-${Date.now()}`,
@@ -464,9 +381,7 @@ export default function Reason() {
                 <button
                   onClick={() => {
                     if (activeOfficer) {
-                      handleQuickApprove();
-                    } else {
-                      setShowAuthModal(true);
+                      handleApprove();
                     }
                   }}
                   className="px-6 py-2.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-xs font-mono font-bold text-white whitespace-nowrap transition-all shadow-lg flex items-center gap-2 cursor-pointer"
@@ -486,112 +401,6 @@ export default function Reason() {
         )}
 
       </div>
-
-      {/* Officer Authentication Modal */}
-      {showAuthModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-[#141414] border border-white/10 rounded-2xl w-full max-w-md p-6 sm:p-8 space-y-6 shadow-2xl relative">
-            <div className="text-center space-y-2">
-              <div className="w-12 h-12 rounded-full bg-[#FF6B1A]/10 border border-[#FF6B1A]/30 text-[#FF6B1A] flex items-center justify-center mx-auto mb-4">
-                <KeyRound className="w-6 h-6" />
-              </div>
-              <h2 className="text-xl font-bold text-white">Officer Authentication</h2>
-              <p className="text-xs text-[#9A9A9A]">
-                Sign in with duty credentials to authorize dispatch to <strong className="text-slate-200">{currentZone.name}</strong>.
-              </p>
-            </div>
-
-            {/* Quick Demo Officer Selector */}
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-mono text-slate-400 block">Select Duty Officer (Demo Presets):</label>
-              <div className="grid grid-cols-1 gap-1.5">
-                {DEFAULT_OFFICERS.map(o => (
-                  <button
-                    key={o.id}
-                    type="button"
-                    onClick={() => {
-                      setOfficerIdInput(o.id);
-                      setPasswordInput(o.defaultPass);
-                    }}
-                    className={`p-2.5 rounded-xl border text-left text-xs transition-all ${
-                      officerIdInput === o.id 
-                        ? 'bg-[#FF6B1A]/10 border-[#FF6B1A] text-white' 
-                        : 'bg-black/30 border-white/5 text-slate-400 hover:border-white/20'
-                    }`}
-                  >
-                    <div className="font-bold text-white">{o.name} <span className="font-mono text-[10px] text-[#FF6B1A]">({o.id})</span></div>
-                    <div className="text-[10px] text-slate-500">{o.rank}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <form onSubmit={handleOfficerLoginAndApprove} className="space-y-4">
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-xs font-mono text-slate-400 mb-1">
-                    Officer ID
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={officerIdInput}
-                    onChange={(e) => setOfficerIdInput(e.target.value)}
-                    className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl p-3 text-xs font-mono text-white focus:outline-none focus:border-[#FF6B1A]"
-                    placeholder="e.g. OFF-101"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-mono text-slate-400 mb-1">
-                    Security Passcode
-                  </label>
-                  <input
-                    type="password"
-                    required
-                    value={passwordInput}
-                    onChange={(e) => setPasswordInput(e.target.value)}
-                    className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl p-3 text-xs font-mono text-white focus:outline-none focus:border-[#FF6B1A]"
-                    placeholder="Enter passcode"
-                  />
-                </div>
-              </div>
-
-              {authError && (
-                <div className="p-2.5 rounded-lg bg-red-950/60 border border-red-500/40 text-red-400 text-xs flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                  <span>{authError}</span>
-                </div>
-              )}
-
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowAuthModal(false)}
-                  className="flex-1 py-3 text-xs font-bold text-slate-300 bg-white/5 hover:bg-white/10 rounded-xl transition-all cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isAuthenticating}
-                  className="flex-1 py-3 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl shadow-lg shadow-emerald-900/50 transition-all flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  {isAuthenticating ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <>
-                      <Fingerprint className="w-4 h-4" />
-                      Sign & Execute
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
     </div>
   );
 }

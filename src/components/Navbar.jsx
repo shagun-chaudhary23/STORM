@@ -30,16 +30,18 @@ export default function Navbar() {
     };
   }, []);
 
-  const navItems = [
-    { name: 'HOME', path: '/' },
-    { name: 'DASHBOARD', path: '/dashboard' },
-    { name: 'RESOURCES', path: '/resources' },
-    { name: 'SENSE', path: '/sense' },
-    { name: 'REASON', path: '/reason' },
-    { name: 'REPORT', path: '/report' },
-    { name: 'HOW IT WORKS', path: '/how-it-works' },
-    { name: 'ABOUT', path: '/about' },
+  const allNavItems = [
+    { name: 'HOME', path: '/', public: true },
+    { name: 'DASHBOARD', path: '/dashboard', public: false },
+    { name: 'RESOURCES', path: '/resources', public: false },
+    { name: 'SENSE', path: '/sense', public: false },
+    { name: 'REASON', path: '/reason', public: false },
+    { name: 'REPORT', path: '/report', public: false },
+    { name: 'HOW IT WORKS', path: '/how-it-works', public: true },
+    { name: 'ABOUT', path: '/about', public: true },
   ];
+
+  const navItems = allNavItems.filter(item => item.public || activeOfficer);
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-[#0A0A0A]/85 backdrop-blur-xl border-b border-white/10 py-3 px-3 sm:px-6">
@@ -86,11 +88,18 @@ export default function Navbar() {
 
         {/* Right Action: Officer status & Request Pilot Button */}
         <div className="hidden sm:flex items-center gap-2.5">
-          {activeOfficer && (
+          {activeOfficer ? (
             <div className="hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-950/60 border border-emerald-500/30 text-[10px] font-mono text-emerald-400">
               <UserCheck className="w-3 h-3 text-[#FF6B1A]" />
               <span className="font-bold truncate max-w-[140px]">{activeOfficer.name}</span>
             </div>
+          ) : (
+            <button
+              onClick={() => navigate('/login')}
+              className="hidden lg:block py-1.5 px-4 text-[10px] uppercase tracking-wider font-bold text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 rounded-full border border-white/10 transition-all cursor-pointer"
+            >
+              Sign In
+            </button>
           )}
 
           <button
@@ -115,10 +124,22 @@ export default function Navbar() {
       {/* Mobile Menu */}
       {mobileOpen && (
         <div className="xl:hidden mt-3 bg-[#141414] border border-white/10 p-4 rounded-2xl space-y-1.5 animate-fade-in max-h-[80vh] overflow-y-auto">
-          {activeOfficer && (
+          {activeOfficer ? (
             <div className="mb-2 p-2.5 rounded-xl bg-emerald-950/40 border border-emerald-500/30 text-xs font-mono text-emerald-400 flex items-center gap-2">
               <UserCheck className="w-4 h-4 text-[#FF6B1A]" />
               <span>Signed in: <strong>{activeOfficer.name}</strong> ({activeOfficer.rank})</span>
+            </div>
+          ) : (
+            <div className="mb-2">
+              <button
+                onClick={() => {
+                  setMobileOpen(false);
+                  navigate('/login');
+                }}
+                className="w-full py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-bold text-white transition-all text-center uppercase tracking-wider"
+              >
+                Sign In to Console
+              </button>
             </div>
           )}
 
