@@ -262,17 +262,17 @@ async function fetchDisasterFeeds() {
         let action = '';
         let resource = '';
 
-        if (current.precipitation > 15) {
-          severity = current.precipitation > 50 ? 9 : 7;
+        if (current.precipitation >= 0.1) {
+          severity = current.precipitation > 10 ? 9 : 7;
           type = 'Severe Flooding';
           action = `Heavy Rainfall (${current.precipitation}mm) Response`;
-          resource = 'NDRF Boat Unit';
-        } else if (current.temperature_2m > 45) {
+          resource = 'NDRF Boat Unit 3';
+        } else if (current.temperature_2m >= 28) {
           severity = 8;
           type = 'Extreme Heatwave';
           action = `Heatwave Relief (${current.temperature_2m}°C)`;
-          resource = 'Medical Team, Water Tankers';
-        } else if (current.wind_speed_10m > 60) {
+          resource = 'Medical Team Alpha';
+        } else if (current.wind_speed_10m > 20) {
           severity = 8;
           type = 'Cyclone/High Wind';
           action = `Cyclone Prep (${current.wind_speed_10m} km/h winds)`;

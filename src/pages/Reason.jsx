@@ -196,12 +196,17 @@ export default function Reason() {
                   value={selectedZoneId}
                   onChange={(e) => setSelectedZoneId(e.target.value)}
                   className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl p-3.5 text-xs text-white focus:outline-none focus:border-[#FF6B1A]"
+                  disabled={activeZones.length === 0}
                 >
-                  {activeZones.map((zone) => (
-                    <option key={zone.id} value={zone.id}>
-                      {zone.name} (Severity: {zone.severity}/10 – {zone.status?.toUpperCase()})
-                    </option>
-                  ))}
+                  {activeZones.length > 0 ? (
+                    activeZones.map((zone) => (
+                      <option key={zone.id} value={zone.id}>
+                        {zone.name} (Severity: {zone.severity}/10 – {zone.status?.toUpperCase()})
+                      </option>
+                    ))
+                  ) : (
+                    <option value="">No Active Incident Zones Detected</option>
+                  )}
                 </select>
                 <span className="text-[10px] text-[#9A9A9A] block font-mono">
                   Current population: {currentZone?.population?.toLocaleString() || 0} • Active incidents: {currentZone?.activeIncidents || 0}
