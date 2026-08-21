@@ -26,6 +26,7 @@ export default function Dashboard() {
   const [approvedRecs, setApprovedRecs] = useState([]);
   const [liveActivityLog, setLiveActivityLog] = useState([]);
   const [liveResources, setLiveResources] = useState(initialResources);
+  const [fieldReports, setFieldReports] = useState([]);
   const [isDisconnected, setIsDisconnected] = useState(!socket.connected);
 
   useEffect(() => {
@@ -59,6 +60,7 @@ export default function Dashboard() {
         if (data.approvedRecommendations) setApprovedRecs(data.approvedRecommendations);
         if (data.activityLog) setLiveActivityLog(data.activityLog);
         if (data.resources) setLiveResources(data.resources);
+        if (data.fieldReports) setFieldReports(data.fieldReports);
       }
     });
 
@@ -378,6 +380,39 @@ export default function Dashboard() {
                 </div>
               </div>
             </div>
+
+            {/* Recent Field Reports Panel */}
+            {fieldReports.length > 0 && (
+              <div className="p-5 rounded-2xl bg-[#141414] border border-white/10 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <ShieldAlert className="w-4 h-4 text-amber-400" />
+                    <h2 className="text-base font-bold text-white">Recent Field Reports</h2>
+                  </div>
+                  <span className="text-xs font-mono px-2 py-1 bg-amber-950/50 text-amber-400 border border-amber-500/30 rounded-md">
+                    {fieldReports.length}
+                  </span>
+                </div>
+                
+                <div className="space-y-3 max-h-[300px] overflow-y-auto">
+                  {fieldReports.slice(0, 5).map((report) => (
+                    <div key={report.id} className="p-3 bg-[#0A0A0A] rounded-xl border border-white/5 space-y-2">
+                      <div className="flex justify-between items-start">
+                        <span className="text-xs font-bold text-white truncate pr-2">{report.location}</span>
+                        <span className={`px-2 py-0.5 rounded text-[9px] font-mono uppercase flex-shrink-0 ${report.verified ? 'bg-emerald-950 text-emerald-400' : 'bg-amber-950 text-amber-400'}`}>
+                          {report.verified ? 'Verified' : 'Pending'}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-400 line-clamp-2">"{report.description}"</p>
+                      <div className="flex justify-between text-[9px] font-mono text-slate-500">
+                        <span>{report.category}</span>
+                        <span>{report.timestamp}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
           </div>
 

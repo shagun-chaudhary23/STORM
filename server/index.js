@@ -40,6 +40,36 @@ app.get('/api/officers', (req, res) => {
   res.json(db.getOfficers());
 });
 
+// GET all field reports
+app.get('/api/reports', (req, res) => {
+  res.json(db.getFieldReports());
+});
+
+// POST a new field report
+app.post('/api/reports', (req, res) => {
+  const { location, category, severity, description, reporterContact } = req.body;
+  
+  if (!location || !category || !description) {
+    return res.status(400).json({ error: 'Location, category, and description are required.' });
+  }
+
+  const report = {
+    id: 'REP-' + Date.now(),
+    location,
+    category,
+    severity: severity || 'Medium',
+    description,
+    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    verified: false
+  };
+
+  const savedReport = db.addFieldReport(report);
+  db.addLog(`Field report submitted: ${location}, ${category}`, 'report', 'FIELD-01', 'Ground Observer');
+  broadcastState();
+
+  res.status(201).json(savedReport);
+});
+
 app.post('/api/analyze', async (req, res) => {
   try {
     const { zone, resource } = req.body;
@@ -119,7 +149,8 @@ function broadcastState() {
     pendingRecommendations: db.getPendingRecommendations(),
     approvedRecommendations: db.getApprovedRecommendations(),
     activityLog: db.getActivityLog(),
-    resources: db.getResources()
+    resources: db.getResources(),
+    fieldReports: db.getFieldReports()
   });
 }
 
@@ -204,7 +235,8 @@ io.on('connection', (socket) => {
     pendingRecommendations: db.getPendingRecommendations(),
     approvedRecommendations: db.getApprovedRecommendations(),
     activityLog: db.getActivityLog(),
-    resources: db.getResources()
+    resources: db.getResources(),
+    fieldReports: db.getFieldReports()
   });
 
   socket.on('approve_recommendation', (rec) => {

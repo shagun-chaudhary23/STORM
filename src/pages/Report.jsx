@@ -6,12 +6,14 @@ import {
 } from 'lucide-react';
 
 export default function Report() {
-  const [reports, setReports] = useState(initialReports);
+  const [reports, setReports] = useState([]);
   const [location, setLocation] = useState('');
   const [category, setCategory] = useState('Flooding');
   const [description, setDescription] = useState('');
-  const [fileAttached, setFileAttached] = useState(false);
+  const [fileAttached, setFileAttached] = useState(false); // TODO: real file upload, see production hardening checklist
   const [submittedMessage, setSubmittedMessage] = useState(false);
+  const [errorMsg, setErrorMsg] = useState(null);
+  const [loading, setLoading] = useState(false);
   const [activeReport, setActiveReport] = useState(null); // For verification modal
   const [isTyping, setIsTyping] = useState(false);
 
@@ -37,26 +39,49 @@ export default function Report() {
     return () => clearTimeout(timeout);
   }, [description]);
 
-  const handleSubmit = (e) => {
+  useEffect(() => {
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/reports`)
+      .then(res => res.json())
+      .then(data => setReports(data))
+      .catch(err => console.error("Error fetching reports", err));
+  }, []);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!location || !description) return;
 
-    const newReport = {
-      id: Date.now(),
-      location,
-      category,
-      severity: aiSeverity ? aiSeverity.label.split(': ')[1] : 'Medium',
-      description,
-      timestamp: 'Just now',
-      verified: false
-    };
+    setErrorMsg(null);
+    setLoading(true);
 
-    setReports([newReport, ...reports]);
-    setLocation('');
-    setDescription('');
-    setFileAttached(false);
-    setSubmittedMessage(true);
-    setTimeout(() => setSubmittedMessage(false), 5000);
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/reports`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location,
+          category,
+          severity: aiSeverity ? aiSeverity.label.split(': ')[1] : 'Medium',
+          description
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to submit report');
+      }
+
+      const savedReport = await response.json();
+      setReports([savedReport, ...reports]);
+      setLocation('');
+      setDescription('');
+      setFileAttached(false);
+      setSubmittedMessage(true);
+      setTimeout(() => setSubmittedMessage(false), 5000);
+    } catch (err) {
+      setErrorMsg(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleVerify = (id) => {
@@ -109,6 +134,16 @@ export default function Report() {
                   <div>
                     <strong className="block text-white text-sm">Report Successfully Ingested</strong>
                     Incident logged and queued for SDMA spatial deduplication.
+                  </div>
+                </div>
+              )}
+
+              {errorMsg && (
+                <div className="p-4 rounded-xl bg-red-950/40 border border-red-500/40 flex items-center gap-3 text-xs text-red-300 animate-in fade-in slide-in-from-top-2">
+                  <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0" />
+                  <div>
+                    <strong className="block text-white text-sm">Submission Failed</strong>
+                    {errorMsg}
                   </div>
                 </div>
               )}
@@ -225,10 +260,11 @@ export default function Report() {
                 <div className="pt-4 border-t border-white/10 flex justify-end">
                   <button
                     type="submit"
-                    className="w-full sm:w-48 py-3.5 px-6 text-xs uppercase tracking-wider font-extrabold text-white bg-gradient-to-r from-[#FF6B1A] to-[#E8391A] hover:opacity-95 rounded-full shadow-lg shadow-[#FF6B1A]/20 hover:scale-[1.02] transition-all cursor-pointer inline-flex items-center justify-center gap-2"
+                    disabled={loading}
+                    className="w-full sm:w-48 py-3.5 px-6 text-xs uppercase tracking-wider font-extrabold text-white bg-gradient-to-r from-[#FF6B1A] to-[#E8391A] hover:opacity-95 rounded-full shadow-lg shadow-[#FF6B1A]/20 hover:scale-[1.02] transition-all cursor-pointer inline-flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Send className="w-3.5 h-3.5" />
-                    <span>Submit Report</span>
+                    <span>{loading ? 'Submitting...' : 'Submit Report'}</span>
                   </button>
                 </div>
 

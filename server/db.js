@@ -331,6 +331,30 @@ function getActivityLog(limit = 50) {
   return db.prepare('SELECT * FROM activity_log ORDER BY id DESC LIMIT ?').all(limit);
 }
 
+function getFieldReports() {
+  return db.prepare('SELECT * FROM field_reports ORDER BY id DESC').all();
+}
+
+function addFieldReport(report) {
+  const time = report.timestamp || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const verified = report.verified ? 1 : 0;
+  
+  db.prepare(`
+    INSERT INTO field_reports (id, location, category, severity, description, timestamp, verified)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    report.id, 
+    report.location, 
+    report.category, 
+    report.severity, 
+    report.description, 
+    time, 
+    verified
+  );
+
+  return db.prepare('SELECT * FROM field_reports WHERE id = ?').get(report.id);
+}
+
 function addLog(event, type, officerId = null, officerName = null) {
   const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   const timestamp = new Date().toISOString();
@@ -372,5 +396,7 @@ module.exports = {
   getActivityLog,
   addLog,
   getOfficers,
-  authenticateOfficer
+  authenticateOfficer,
+  getFieldReports,
+  addFieldReport
 };
