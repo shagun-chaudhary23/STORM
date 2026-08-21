@@ -12,8 +12,6 @@ import Reason from './pages/Reason';
 import Report from './pages/Report';
 import HowItWorks from './pages/HowItWorks';
 import About from './pages/About';
-import Roadmap from './pages/Roadmap';
-import CoordinatorSimulator from './components/CoordinatorSimulator';
 
 // Scroll to top helper on route change
 function ScrollToTop() {
@@ -55,8 +53,6 @@ export default function App() {
           <Route path="/report" element={<Report />} />
           <Route path="/how-it-works" element={<HowItWorks />} />
           <Route path="/about" element={<About />} />
-          <Route path="/roadmap" element={<Roadmap />} />
-          <Route path="/simulator" element={<CoordinatorSimulator />} />
         </Routes>
       </main>
 

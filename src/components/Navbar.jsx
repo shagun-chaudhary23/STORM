@@ -37,8 +37,6 @@ export default function Navbar() {
     { name: 'SENSE', path: '/sense' },
     { name: 'REASON', path: '/reason' },
     { name: 'REPORT', path: '/report' },
-    { name: 'ROADMAP', path: '/roadmap' },
-    { name: 'SIMULATOR', path: '/simulator' },
     { name: 'HOW IT WORKS', path: '/how-it-works' },
     { name: 'ABOUT', path: '/about' },
   ];
