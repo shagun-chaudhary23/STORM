@@ -127,25 +127,25 @@ safeAddColumn('officers', 'phone TEXT');
 safeAddColumn('field_reports', 'reporter_name TEXT');
 safeAddColumn('field_reports', 'reporter_phone TEXT');
 
-// Initial seed data
+// Initial seed data with configured real notification routing
 const initialResources = [
-  { id: "RES-1", name: "Medical Team Alpha", type: "medical", status: "available", location: "Gangtok Base", assignedZone: null, quantity: null, team_lead_name: "Major Dr. R. Nair", team_lead_phone: "+919876543220" },
-  { id: "RES-2", name: "NDRF Boat Unit 3", type: "rescue", status: "available", location: "Teesta River Post", assignedZone: null, quantity: null, team_lead_name: "Subedar S. Roy", team_lead_phone: "+919876543221" },
-  { id: "RES-3", name: "Relief Kit Stock", type: "supplies", status: "available", location: "Central Warehouse", assignedZone: null, quantity: 850, team_lead_name: "Inspector K. Das", team_lead_phone: "+919876543222" },
-  { id: "RES-4", name: "Medical Team Beta", type: "medical", status: "deployed", location: "Zone 2A", assignedZone: "Zone 2A – Kalimpong", quantity: null, team_lead_name: "Dr. V. Rao", team_lead_phone: "+919876543223" }
+  { id: "RES-1", name: "Medical Team Alpha", type: "medical", status: "available", location: "Gangtok Base", assignedZone: null, quantity: null, team_lead_name: "Major Dr. R. Nair", team_lead_phone: "+916387095624" },
+  { id: "RES-2", name: "NDRF Boat Unit 3", type: "rescue", status: "available", location: "Teesta River Post", assignedZone: null, quantity: null, team_lead_name: "Subedar S. Roy", team_lead_phone: "+916387095624" },
+  { id: "RES-3", name: "Relief Kit Stock", type: "supplies", status: "available", location: "Central Warehouse", assignedZone: null, quantity: 850, team_lead_name: "Inspector K. Das", team_lead_phone: "+916387095624" },
+  { id: "RES-4", name: "Medical Team Beta", type: "medical", status: "deployed", location: "Zone 2A", assignedZone: "Zone 2A – Kalimpong", quantity: null, team_lead_name: "Dr. V. Rao", team_lead_phone: "+916387095624" }
 ];
 
 const initialOfficers = [
-  { id: "OFF-101", name: "Col. Rajesh Sharma", rank: "SDMA Relief Commissioner", passwordHash: bcrypt.hashSync("officer101", 10), phone: "+919876543210" },
-  { id: "OFF-102", name: "Dr. Ananya Sen", rank: "NDMA Operations Chief", passwordHash: bcrypt.hashSync("officer102", 10), phone: "+919876543211" },
-  { id: "OFF-103", name: "Capt. Vikram Malhotra", rank: "NDRF Sector Commander", passwordHash: bcrypt.hashSync("officer103", 10), phone: "+919876543212" }
+  { id: "OFF-101", name: "Col. Rajesh Sharma", rank: "SDMA Relief Commissioner", passwordHash: bcrypt.hashSync("officer101", 10), phone: "+919870551588" },
+  { id: "OFF-102", name: "Dr. Ananya Sen", rank: "NDMA Operations Chief", passwordHash: bcrypt.hashSync("officer102", 10), phone: "+919870551588" },
+  { id: "OFF-103", name: "Capt. Vikram Malhotra", rank: "NDRF Sector Commander", passwordHash: bcrypt.hashSync("officer103", 10), phone: "+919870551588" }
 ];
 
 const initialLogs = [
   { time: "Just now", event: "STORM system initialized with real-time feeds", type: "system", officerId: "SYSTEM", officerName: "STORM AI", timestamp: new Date().toISOString() }
 ];
 
-// Seed if empty
+// Seed if empty or synchronize updated routing
 function seedDatabaseIfEmpty() {
   const resCount = db.prepare('SELECT COUNT(*) as count FROM resources').get().count;
   if (resCount === 0) {
@@ -160,11 +160,11 @@ function seedDatabaseIfEmpty() {
     });
     insertManyRes(initialResources);
   } else {
-    // Update existing resources with team leads if missing
+    // Update existing resources with configured team lead phone numbers
     for (const r of initialResources) {
       db.prepare(`
         UPDATE resources 
-        SET team_lead_name = COALESCE(team_lead_name, ?), team_lead_phone = COALESCE(team_lead_phone, ?)
+        SET team_lead_name = COALESCE(team_lead_name, ?), team_lead_phone = ?
         WHERE id = ?
       `).run(r.team_lead_name, r.team_lead_phone, r.id);
     }
@@ -193,7 +193,7 @@ function seedDatabaseIfEmpty() {
         }
         db.prepare(`
           UPDATE officers 
-          SET passwordHash = ?, phone = COALESCE(phone, ?)
+          SET passwordHash = ?, phone = ?
           WHERE id = ?
         `).run(hash, o.phone, o.id);
       }
