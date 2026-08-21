@@ -9,6 +9,7 @@ import {
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 const socket = io(API_URL, {
+  auth: { token: localStorage.getItem('storm_officer_token') },
   reconnection: true,
   reconnectionAttempts: 5,
   reconnectionDelay: 1000,
@@ -100,8 +101,11 @@ export default function Reason() {
           })
         });
         const data = await response.json();
-        if (response.ok && data.officer) {
+        if (response.ok && data.officer && data.token) {
           officer = data.officer;
+          localStorage.setItem('storm_officer_token', data.token);
+          socket.auth = { token: data.token };
+          socket.disconnect().connect();
         } else {
           setAuthError(data.error || 'Invalid credentials');
           setIsAuthenticating(false);
@@ -179,6 +183,9 @@ export default function Reason() {
   const handleOfficerLogout = () => {
     setActiveOfficer(null);
     localStorage.removeItem('storm_officer');
+    localStorage.removeItem('storm_officer_token');
+    socket.auth = {};
+    socket.disconnect().connect();
   };
 
   return (

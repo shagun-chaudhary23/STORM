@@ -1,5 +1,6 @@
 const Database = require('better-sqlite3');
 const path = require('path');
+const bcrypt = require('bcrypt');
 
 const dbPath = path.join(__dirname, 'storm.db');
 const db = new Database(dbPath);
@@ -98,9 +99,9 @@ const initialFieldReports = [
 ];
 
 const initialOfficers = [
-  { id: "OFF-101", name: "Col. Rajesh Sharma", rank: "SDMA Relief Commissioner", passwordHash: "officer101" },
-  { id: "OFF-102", name: "Dr. Ananya Sen", rank: "NDMA Operations Chief", passwordHash: "officer102" },
-  { id: "OFF-103", name: "Capt. Vikram Malhotra", rank: "NDRF Sector Commander", passwordHash: "officer103" }
+  { id: "OFF-101", name: "Col. Rajesh Sharma", rank: "SDMA Relief Commissioner", passwordHash: bcrypt.hashSync("officer101", 10) },
+  { id: "OFF-102", name: "Dr. Ananya Sen", rank: "NDMA Operations Chief", passwordHash: bcrypt.hashSync("officer102", 10) },
+  { id: "OFF-103", name: "Capt. Vikram Malhotra", rank: "NDRF Sector Commander", passwordHash: bcrypt.hashSync("officer103", 10) }
 ];
 
 const initialLogs = [
@@ -371,7 +372,7 @@ function getOfficers() {
 function authenticateOfficer(officerId, password) {
   const officer = db.prepare('SELECT * FROM officers WHERE id = ?').get(officerId);
   if (!officer) return null;
-  if (officer.passwordHash === password) {
+  if (bcrypt.compareSync(password, officer.passwordHash)) {
     return {
       id: officer.id,
       name: officer.name,

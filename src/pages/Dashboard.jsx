@@ -11,6 +11,7 @@ import {
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 const socket = io(API_URL, {
+  auth: { token: localStorage.getItem('storm_officer_token') },
   reconnection: true,
   reconnectionAttempts: 5,
   reconnectionDelay: 1000,
@@ -64,6 +65,10 @@ export default function Dashboard() {
       }
     });
 
+    socket.on('auth_error', (data) => {
+      alert(`Authorization Error: ${data.message || 'Action denied'}`);
+    });
+
     if (!socket.connected) {
       setIsDisconnected(true);
     }
@@ -74,6 +79,7 @@ export default function Dashboard() {
       socket.off('connect_error', handleConnectError);
       socket.off('reconnect', handleReconnect);
       socket.off('storm_state_update');
+      socket.off('auth_error');
     };
   }, []);
 

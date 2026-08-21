@@ -6,6 +6,7 @@ const cors = require('cors');
 const axios = require('axios');
 const { GoogleGenAI } = require('@google/genai');
 const db = require('./db');
+const jwt = require('jsonwebtoken');
 
 const app = express();
 app.use(cors());
@@ -30,7 +31,14 @@ app.post('/api/login', (req, res) => {
   if (officer) {
     db.addLog(`Officer ${officer.name} (${officer.id}) signed in to tactical session.`, 'system', officer.id, officer.name);
     broadcastState();
-    return res.json({ success: true, officer });
+    
+    const token = jwt.sign(
+      { id: officer.id, name: officer.name, rank: officer.rank },
+      process.env.JWT_SECRET || 'storm_fallback_secret_key',
+      { expiresIn: '8h' }
+    );
+
+    return res.json({ success: true, officer, token });
   }
   return res.status(401).json({ error: 'Invalid Officer ID or Password.' });
 });
@@ -136,9 +144,23 @@ Return ONLY a valid JSON object matching exactly this structure:
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "*", // allow all for demo
+    origin: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : "*",
     methods: ["GET", "POST"]
   }
+});
+
+io.use((socket, next) => {
+  const token = socket.handshake.auth?.token;
+  if (!token) {
+    // Allow connection but mark as unauthenticated for read-only access (dashboard viewers)
+    return next();
+  }
+  
+  jwt.verify(token, process.env.JWT_SECRET || 'storm_fallback_secret_key', (err, decoded) => {
+    if (err) return next(new Error('Authentication error'));
+    socket.user = decoded;
+    next();
+  });
 });
 
 const PORT = process.env.PORT || 3001;
@@ -240,34 +262,37 @@ io.on('connection', (socket) => {
   });
 
   socket.on('approve_recommendation', (rec) => {
-    const officerInfo = (rec.officerId || rec.officerName)
-      ? { id: rec.officerId, name: rec.officerName, rank: rec.rank }
-      : null;
+    if (!socket.user) {
+      return socket.emit('auth_error', { message: 'Authentication required for this action' });
+    }
+    const officerInfo = { id: socket.user.id, name: socket.user.name, rank: socket.user.rank };
 
     db.approveRecommendation(rec, officerInfo);
     
-    const officerLabel = officerInfo?.name 
-      ? `Officer ${officerInfo.name} (${officerInfo.id || 'Command'})` 
-      : 'Officer';
-    
-    db.addLog(`${officerLabel} approved dispatch for ${rec.zone || 'designated sector'}.`, 'approval', officerInfo?.id, officerInfo?.name);
+    const officerLabel = `Officer ${officerInfo.name} (${officerInfo.id || 'Command'})`;
+    db.addLog(`${officerLabel} approved dispatch for ${rec.zone || 'designated sector'}.`, 'approval', officerInfo.id, officerInfo.name);
     
     broadcastState();
   });
 
   socket.on('reject_recommendation', (recId) => {
+    if (!socket.user) {
+      return socket.emit('auth_error', { message: 'Authentication required for this action' });
+    }
     const id = typeof recId === 'object' ? (recId.id || recId.recommendationId) : recId;
     db.rejectRecommendation(id);
-    db.addLog(`Officer rejected AI recommendation (ID: ${id}).`, 'system');
+    db.addLog(`Officer ${socket.user.name} rejected AI recommendation (ID: ${id}).`, 'system', socket.user.id, socket.user.name);
     broadcastState();
   });
 
   socket.on('bind_resource', (payload) => {
-    const { resourceId, targetZoneId, targetZoneName, officerId, officerName } = payload;
+    if (!socket.user) {
+      return socket.emit('auth_error', { message: 'Authentication required for this action' });
+    }
+    const { resourceId, targetZoneId, targetZoneName } = payload;
     const updated = db.bindResource(resourceId, targetZoneId, targetZoneName);
     if (updated) {
-      const officerLabel = officerName ? ` by ${officerName}` : '';
-      db.addLog(`Resource ${updated.name} deployed to ${updated.assignedZone}${officerLabel}.`, 'system', officerId, officerName);
+      db.addLog(`Resource ${updated.name} deployed to ${updated.assignedZone} by ${socket.user.name}.`, 'system', socket.user.id, socket.user.name);
       broadcastState();
     }
   });
